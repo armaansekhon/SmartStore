@@ -17,9 +17,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import useSignUp from '../../hooks/useSignUp';
 
 const SignUp = () => {
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -28,17 +30,66 @@ const SignUp = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const Router = useRouter();
+  const { signUp, loading, error } = useSignUp();
 
-  const handleSignUp = () => {
-    if (!fullName || !email || !password || !confirmPassword || password !== confirmPassword) {
-      Alert.alert('Error', 'Please fill all fields and ensure passwords match.');
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSignUp = async () => {
+    // Client-side validations
+    if (!firstName.trim()) {
+      Alert.alert('Error', 'First Name is required.');
+      return;
+    }
+    if (!lastName.trim()) {
+      Alert.alert('Error', 'Last Name is required.');
+      return;
+    }
+    if (!email.trim()) {
+      Alert.alert('Error', 'Email is required.');
+      return;
+    }
+    if (!validateEmail(email)) {
+      Alert.alert('Error', 'Please enter a valid email address.');
+      return;
+    }
+    if (!password) {
+      Alert.alert('Error', 'Password is required.');
+      return;
+    }
+    if (!confirmPassword) {
+      Alert.alert('Error', 'Confirm Password is required.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match.');
       return;
     }
     if (!acceptedTerms) {
       Alert.alert('Error', 'Please accept the Terms & Conditions.');
       return;
     }
-    Router.push('/Verify');
+
+    // Prepare payload (removed id field as it's likely not needed)
+    const payload = {
+      FirstName: firstName.trim(),
+      LastName: lastName.trim(),
+      Email: email.trim(),
+      Password: password,
+      id:"-1",
+    };
+
+    try {
+      await signUp(payload);
+      Alert.alert('Success', 'Sign-up successful! Redirecting to verification...');
+  Router.push({ pathname: '/Verify', params: { email: email.trim() } });
+    } catch (err) {
+      // Enhanced error display to show specific error message
+      console.log('SignUp Error:', error);
+      Alert.alert('Error', error || err.message || 'An error occurred during sign-up. Please try again.');
+    }
   };
 
   return (
@@ -53,17 +104,12 @@ const SignUp = () => {
           imageStyle={{ opacity: 0.7 }}
         >
           <View style={styles.textContainer}>
-          
-             
-              <Text style={[styles.welcomeTitle, { color: '#fff',  }]}>
-                Get Started
-              </Text>
-      
-           
-              <Text style={[styles.subtitle, { color: '#fff', }]}>
-                Track your inventory effortlessly with our app.
-              </Text>
-           
+            <Text style={[styles.welcomeTitle, { color: '#fff' }]}>
+              Get Started
+            </Text>
+            <Text style={[styles.subtitle, { color: '#fff' }]}>
+              Track your inventory effortlessly with our app.
+            </Text>
           </View>
         </ImageBackground>
 
@@ -78,32 +124,44 @@ const SignUp = () => {
           <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>Sign Up</Text>
 
-            {/* Row for Full Name and Email ID */}
+            {/* Row for First Name and Last Name */}
             <View style={styles.inputRow}>
-              {/* Full Name */}
+              {/* First Name */}
               <View style={styles.inputColumn}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>First Name</Text>
                 <TextInput
-                  placeholder="Joe Rogan "
-                  value={fullName}
-                  onChangeText={setFullName}
+                  placeholder="Joe"
+                  value={firstName}
+                  onChangeText={setFirstName}
                   style={[styles.input, { backgroundColor: '#222' }]}
                   placeholderTextColor="#aaa"
                 />
               </View>
 
-              {/* Email ID */}
+              {/* Last Name */}
               <View style={styles.inputColumn}>
-                <Text style={styles.label}>Email ID</Text>
+                <Text style={styles.label}>Last Name</Text>
                 <TextInput
-                  placeholder="xyz@gmail.com"
-                  value={email}
-                  onChangeText={setEmail}
+                  placeholder="Rogan"
+                  value={lastName}
+                  onChangeText={setLastName}
                   style={[styles.input, { backgroundColor: '#222' }]}
                   placeholderTextColor="#aaa"
                 />
               </View>
             </View>
+
+            {/* Email ID */}
+            <Text style={styles.label}>Email ID</Text>
+            <TextInput
+              placeholder="xyz@gmail.com"
+              value={email}
+              onChangeText={setEmail}
+              style={[styles.input, { backgroundColor: '#222', marginBottom: 20 }]}
+              placeholderTextColor="#aaa"
+              keyboardType="email-address"
+              autoCapitalize='none'
+            />
 
             {/* Password */}
             <Text style={styles.label}>Password</Text>
@@ -152,14 +210,20 @@ const SignUp = () => {
             </TouchableOpacity>
 
             {/* Sign Up Button */}
-            <TouchableOpacity activeOpacity={0.8} onPress={handleSignUp}>
+            <TouchableOpacity 
+              activeOpacity={0.8} 
+              onPress={handleSignUp}
+              disabled={loading}
+            >
               <LinearGradient
                 colors={['#4A47A3', '#B295F8']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.button}
+                style={[styles.button, loading && { opacity: 0.7 }]}
               >
-                <Text style={styles.buttonText}>SIGN UP</Text>
+                <Text style={styles.buttonText}>
+                  {loading ? 'SIGNING UP...' : 'SIGN UP'}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
 
@@ -225,14 +289,13 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 38,
-   
     fontWeight: '800',
   },
   subtitle: {
     fontSize: 15,
     marginTop: 5,
     fontWeight: '600',
-    width:240
+    width: 240,
   },
   title: {
     fontSize: 28,
@@ -255,7 +318,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   input: {
-    borderRadius:8,
+    borderRadius: 8,
     padding: 12,
     fontSize: 14,
     color: '#fff',

@@ -9,22 +9,62 @@ import {
   ScrollView,
   StatusBar,
   Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import useLogin from '../../hooks/useLogin';
 
 const SignInScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const Router = useRouter();
+  const { login, loading, error } = useLogin();
 
-  const handleLogin = () => {
-    if (email.trim() !== '' && password.trim() !== '') {
-      Router.push('/(drawer)');
-    } else {
-      alert('Please enter email and password');
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    try {
+      const response = await login({ email, password });
+      if (!response.accessToken || !response.userToken || !response.userId) {
+        Alert.alert('Warning', 'Login successful, but some data is missing. Please contact support.');
+      } else {
+        Alert.alert('Success', 'Logged in successfully!');
+      }
+
+      // Redirect based on FirstLogin
+      const firstLogin = response.firstLogin || 'False';
+      if (firstLogin === 'True') {
+        console.log('Redirecting to /BusinessDetails due to FirstLogin: True');
+        Router.push('/Bdetails');
+      } else {
+        console.log('Redirecting to /(drawer) due to FirstLogin:', firstLogin);
+        Router.push('/(drawer)');
+      }
+    } catch (err) {
+      console.log('Login Error:', { error, message: err.message });
+      let errorMessage = 'Failed to log in. Please try again.';
+      if (error?.includes('Invalid credentials')) {
+        errorMessage = 'Invalid email or password. Please try again or sign up.';
+      } else if (error?.includes('Invalid JSON')) {
+        errorMessage = 'Server returned invalid data. Please try again later.';
+      } else if (error?.includes('No response data')) {
+        errorMessage = 'No response from server. Please check your connection.';
+      } else if (error?.includes('Missing required fields')) {
+        errorMessage = 'Incomplete server response. Please try again later.';
+      }
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -37,7 +77,6 @@ const SignInScreen = () => {
           <Text style={styles.logoText}>LOGO HERE</Text>
         </View>
 
-        {/* Sign-in form card */}
         <View style={styles.card}>
           <Text style={styles.title}>Sign In</Text>
 
@@ -46,8 +85,10 @@ const SignInScreen = () => {
             placeholder="xyz@gmail.com"
             value={email}
             onChangeText={setEmail}
-            style={[styles.input, { backgroundColor: '#2222' }]}
+            style={[styles.input, { backgroundColor: '#222' }]}
             placeholderTextColor="#aaa"
+            keyboardType="email-address"
+            autoCapitalize="none"
           />
 
           <Text style={styles.label}>Password</Text>
@@ -55,9 +96,10 @@ const SignInScreen = () => {
             placeholder="*****"
             value={password}
             onChangeText={setPassword}
-            style={[styles.input, { backgroundColor: '#2222' }]}
+            style={[styles.input, { backgroundColor: '#222' }]}
             secureTextEntry
             placeholderTextColor="#aaa"
+            autoCapitalize="none"
           />
 
           <View style={styles.row}>
@@ -73,25 +115,31 @@ const SignInScreen = () => {
               <Text style={styles.checkboxLabel}>Remember me</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => Router.push("Forget")}>
+            <TouchableOpacity onPress={() => Router.push('/Forget')}>
               <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity activeOpacity={0.8} onPress={handleLogin}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleLogin}
+            disabled={loading}
+          >
             <LinearGradient
               colors={['#4A47A3', '#B295F8']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.button}
+              style={[styles.button, loading && { opacity: 0.7 }]}
             >
-              <Text style={styles.buttonText}>SIGN IN</Text>
+              <Text style={styles.buttonText}>
+                {loading ? 'SIGNING IN...' : 'SIGN IN'}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
 
           <Text style={styles.bottomText}>
             Don’t have an account?
-            <TouchableOpacity onPress={() => Router.push("/SignUp")}>
+            <TouchableOpacity onPress={() => Router.push('/SignUp')}>
               <Text style={styles.linkText}> Sign up</Text>
             </TouchableOpacity>
           </Text>
@@ -138,7 +186,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 30,
     color: '#B295F8',
-
   },
   label: {
     fontSize: 16,
@@ -151,6 +198,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     fontSize: 16,
     color: '#fff',
+    backgroundColor: '#222',
   },
   row: {
     flexDirection: 'row',
