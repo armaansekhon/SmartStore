@@ -18,10 +18,11 @@ import {
 import { getStatusBarHeight } from 'react-native-status-bar-height';
 
 const drawerItems = [
+   { label: 'Home', icon: <MaterialIcons name="house" size={22} color="#374151" />, route: '/' },
   { label: 'Sale', icon: <MaterialIcons name="sell" size={22} color="#374151" />, route: '/Sale' },
   { label: 'Purchase', icon: <Feather name="shopping-bag" size={22} color="#374151" />, route: '/Purchase' },
   { label: 'Inventory', icon: <Ionicons name="cube-outline" size={22} color="#374151" />, route: 'Inventory' },
-  { label: 'Search Inventory', icon: <Feather name="search" size={22} color="#374151" />, route: 'search-inventory' },
+  { label: 'Add Entry', icon: <Ionicons name="add" size={22} color="#374151" />, route: 'AddEntry' },
   { label: 'Account', icon: <MaterialIcons name="person-outline" size={22} color="#374151" />, route: 'Account' },
   { label: 'Change Password', icon: <Feather name="key" size={22} color="#374151" />, route: 'ChangePass' },
   { label: 'Logout', icon: <MaterialIcons name="logout" size={22} color="#374151" />, route: 'logout' },
