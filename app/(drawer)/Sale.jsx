@@ -1,59 +1,112 @@
-import React from 'react';
-import { StyleSheet, Text, View, TextInput,  TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, Image, FlatList, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import LottieView from 'lottie-react-native';
+import { useNavigation } from 'expo-router';
 
 const Sale = () => {
+  // Sample data for the list
+  const Nav= useNavigation()
+  const [saleData, setSaleData] = useState([
+    { id: '1', name: 'iPhone 13 Pro Max', description: 'Phone is in excellent condition', batteryHealth: '100%', price: '₹54,677', warranty: 'IN WARRANTY' },
+    { id: '2', name: 'iPhone 12 Pro', description: 'Phone is in good condition', batteryHealth: '85%', price: '₹45,000', warranty: 'OUT OF WARRANTY' },
+    { id: '3', name: 'iPhone 14', description: 'Like new, barely used', batteryHealth: '95%', price: '₹60,000', warranty: 'IN WARRANTY' },
+    { id: '4', name: 'iPhone 11', description: 'Phone is in excellent condition', batteryHealth: '80%', price: '₹35,000', warranty: 'OUT OF WARRANTY' },
+    { id: '5', name: 'iPhone 13', description: 'Minor scratches', batteryHealth: '90%', price: '₹50,000', warranty: 'OUT OF WARRANTY' },
+    { id: '6', name: 'iPhone 13 Pro Max', description: 'Phone is in excellent condition', batteryHealth: '98%', price: '₹55,000', warranty: 'IN WARRANTY' },
+    { id: '7', name: 'iPhone 12', description: 'Good condition', batteryHealth: '87%', price: '₹40,000', warranty: 'OUT OF WARRANTY' },
+    { id: '8', name: 'iPhone 14 Pro', description: 'Excellent condition', batteryHealth: '99%', price: '₹65,000', warranty: 'IN WARRANTY' },
+  ]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter data based on search query
+  const filteredData = saleData.filter(item =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const renderItem = ({ item }) => (
+    <View style={styles.itemContainer}>
+      <Image
+        source={{ uri: 'https://placeimg.com/108/104/tech' }}
+        style={styles.itemImage}
+        defaultSource={require('../../assets/images/icon.png')} // Fallback image
+      />
+      <View style={styles.itemTextContainer}>
+        <Text style={styles.itemName}>{item.name}</Text>
+        <Text style={styles.itemDescription}>{item.description}</Text>
+        <View style={styles.batteryContainer}>
+          <Ionicons name="battery-full" size={16} color="#34d399" style={styles.batteryIcon} />
+          <Text style={styles.batteryText}>Battery Health: {item.batteryHealth}</Text>
+        </View>
+        <View style={styles.itemFooter}>
+          <Text style={styles.itemPrice}>{item.price}</Text>
+          <View style={[
+            styles.warrantyBadge,
+            { backgroundColor: item.warranty === 'IN WARRANTY' ? '#1a3c34' : '#4b1c1c' }
+          ]}>
+            <Text style={[
+              styles.warrantyText,
+              { color: item.warranty === 'IN WARRANTY' ? '#34d399' : '#f87171' }
+            ]}>
+              {item.warranty}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={styles.safeArea}>
-      {/* Header (already set as per your comment) */}
-      
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity  onPress={()=>{Nav.openDrawer()}}>
+          <Ionicons name="menu" size={28} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Ionicons name="add" size={28} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Title and Animation */}
+      <View style={styles.titleContainer}>
+        <View style={styles.titleTextContainer}>
+          <Text style={styles.titleText}>Sale</Text>
+          <Text style={styles.subtitleText}>Here is the list of items for sale</Text>
+        </View>
+        <View style={styles.animationContainer}>
+          <LottieView
+            source={require('../../assets/lottie/reales2.json')} // Ensure you have a Lottie JSON file
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+          />
+        </View>
+      </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#564dcc" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search"
+          placeholder="Search items for sale..."
           placeholderTextColor="#888"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
       </View>
 
-      {/* Subheader */}
-      <View style={styles.subheader}>
-        <View style={styles.stockContainer}>
-          <Text style={styles.stockText}>Sold Stock</Text>
-          <View style={styles.stockBadge}>
-            <Text style={styles.stockNumber}>25</Text>
-          </View>
-        </View>
-        {/* <Picker
-          style={styles.dropdown}
-          selectedValue="Last 30 days"
-        >
-          <Picker.Item label="Last 30 days" value="30" />
-          <Picker.Item label="Last 10 days" value="10" />
-          <Picker.Item label="Last 7 days" value="7" />
-        </Picker> */}
-      </View>
-
-      {/* Placeholder for SVG and Text */}
-      <View style={styles.content}>
-        {/* Placeholder for SVG (e.g., person with cart illustration) */}
-        <View style={styles.svgPlaceholder}>
-          <Text style={styles.placeholderText}>[SVG Placeholder: Person with Cart Illustration]</Text>
-        </View>
-
-        {/* Text */}
-        <Text style={styles.noStockText}>Oops! No Stock Found</Text>
-        <Text style={styles.descriptionText}>
-          You can add stock by clicking button below the will reflect here.
-        </Text>
-
-        {/* Add Entry Button */}
-        <TouchableOpacity style={styles.addButton}>
-          <Text style={styles.addButtonText}>Add Entry</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      {/* List of Sale Items */}
+      <FlatList
+        data={filteredData}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        style={styles.list}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 };
 
@@ -62,115 +115,123 @@ export default Sale;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#3b82f6',
-    paddingVertical: 15,
+    alignItems: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 5,
   },
-  headerIcon: {
-    fontSize: 24,
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  titleTextContainer: {
+    flex: 1,
+  },
+  titleText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#564dcc',
+  },
+  subtitleText: {
+    fontSize: 14,
+    color: '#fff',
+    marginTop: 4,
+  },
+  animationContainer: {
+    width: 100,
+    height: 100,
+  },
+  lottieAnimation: {
+    width: '100%',
+    height: '100%',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginVertical: 15,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    padding: 10,
+    fontSize: 16,
     color: '#fff',
   },
-  headerTitle: {
-    fontSize: 20,
+  list: {
+    paddingHorizontal: 20,
+  },
+  itemContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  itemImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 10,
+    backgroundColor: '#333', // Fallback background for image loading
+  },
+  itemTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  itemName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  itemDescription: {
+    fontSize: 14,
+    color: '#aaa',
+    marginBottom: 4,
+  },
+  batteryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  batteryIcon: {
+    marginRight: 4,
+  },
+  batteryText: {
+    fontSize: 14,
+    color: '#aaa',
+  },
+  itemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  itemPrice: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
   },
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    position:"absolute",
-    width:"100%",
-    zIndex:10,
-    top:-30,
-    
-  },
-  searchInput: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-    color: '#333',
-    elevation: 2,
-  },
-  subheader: {
-    marginTop:30,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  stockContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stockText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
-  },
-  stockBadge: {
-    backgroundColor: '#fee2e2',
+  warrantyBadge: {
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  stockNumber: {
-    fontSize: 14,
-    color: '#dc2626',
-    fontWeight: '600',
-  },
-  dropdown: {
-    width: 120,
-    height: 40,
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  svgPlaceholder: {
-    width: 200,
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  placeholderText: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-  },
-  noStockText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  descriptionText: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  addButton: {
-    
-    borderColor: '#3b82f6',
-    
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  addButtonText: {
-    fontSize: 16,
-    color: '#3b82f6',
+  warrantyText: {
+    fontSize: 12,
     fontWeight: '600',
   },
 });

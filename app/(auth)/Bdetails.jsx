@@ -102,7 +102,7 @@ const Bdetails = () => {
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        Router.replace('/login');
+        Router.replace('/(drawer)');
       }, 3000);
     } catch (err) {
       let errorMessage = submitError || 'Failed to save business details. Please try again.';

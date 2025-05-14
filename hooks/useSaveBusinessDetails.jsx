@@ -26,14 +26,15 @@ const useSaveBusinessDetails = () => {
         payload,
       });
 
-      const response = await fetch(`${BASE_URL}/User/SaveBusinessDetails`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
+     const response = await fetch(`${BASE_URL}/User/SaveBussinessDetails`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${accessToken}`,
+  },
+  body: JSON.stringify(payload),
+});
+
 
       // Log response status and headers
       console.log('Response Status:', response.status);

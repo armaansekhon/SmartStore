@@ -171,7 +171,7 @@ const SignUp = () => {
                 value={password}
                 onChangeText={setPassword}
                 style={styles.inputField}
-                secureTextEntry={!passwordVisible}
+                // secureTextEntry={!passwordVisible}
                 placeholderTextColor="#aaa"
               />
               <TouchableOpacity onPress={() => setPasswordVisible(!passwordVisible)}>
@@ -187,7 +187,7 @@ const SignUp = () => {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 style={styles.inputField}
-                secureTextEntry={!confirmPasswordVisible}
+                // secureTextEntry={!confirmPasswordVisible}
                 placeholderTextColor="#aaa"
               />
               <TouchableOpacity onPress={() => setConfirmPasswordVisible(!confirmPasswordVisible)}>
@@ -216,7 +216,7 @@ const SignUp = () => {
               disabled={loading}
             >
               <LinearGradient
-                colors={['#4A47A3', '#B295F8']}
+                colors={['#564dcc', '#564dcc']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[styles.button, loading && { opacity: 0.7 }]}
@@ -231,7 +231,7 @@ const SignUp = () => {
             <Text style={styles.bottomText}>
               Already have an account?{' '}
               <TouchableOpacity onPress={() => Router.push('/login')}>
-                <Text style={[styles.linkText, { color: '#B295F8' }]}>Sign in</Text>
+                <Text style={[styles.linkText, { color: '#564dcc' }]}>Sign in</Text>
               </TouchableOpacity>
             </Text>
           </ScrollView>
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 260,
   },
   textContainer: {
     position: 'absolute',
@@ -298,10 +298,10 @@ const styles = StyleSheet.create({
     width: 240,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '500',
     marginBottom: 30,
-    color: '#B295F8',
+    color: '#564dcc',
   },
   label: {
     fontSize: 14,

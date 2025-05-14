@@ -1,221 +1,286 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
+import React, { useRef } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, DrawerLayoutAndroid } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import Statsection from '../../components/ui/Statsection';
+import LottieView from "lottie-react-native"
+import { ScrollView } from 'react-native-gesture-handler';
+import { useNavigation } from 'expo-router';
 
 const Index = () => {
+  const drawer = useRef(null);
+  const router = useRouter();
+  const Nav=useNavigation();
 
-  const Router=useRouter
+  const user = {
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+  };
+
+
   return (
-    
-    <View style={styles.safeArea}>
-      {/* Card positioned above the header */}
-      <View style={styles.cardContainer}>
-        <View style={styles.card}>
-          <Image
-            source={{ uri: 'https://placeimg.com/108/104/people' }}
-            style={styles.image}
-          />
-          <View style={styles.textContainer}>
-            <Text style={styles.name}>John Doe</Text>
-            <Text style={styles.email}>john.doe@example.com</Text>
+  
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => Nav.openDrawer()}>
+            <Ionicons name="menu" size={28} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity  onPress={() => router.push("/Notification")}>
+            <Ionicons name="notifications-outline" size={28} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* User Section */}
+        <View style={styles.userSection}>
+          <Ionicons name="person-circle" size={60} color="#564dcc" />
+          <View style={{ marginLeft: 12 }}>
+            <Text style={styles.greeting}>Hello,<Text style={{color:"white"}} >{user.name}</Text> </Text>
+            <Text style={styles.email}>{user.email}</Text>
           </View>
         </View>
+
+        {/* Dashboard */}
+        <ScrollView style={styles.content}>
+        <View style={styles.dividerContainer}>
+  <View style={styles.dividerLine} />
+  {/* <Text style={styles.dividerText}>Dashboard</Text> */}
+  <View style={styles.dividerLine} />
+
+  {/* Business Detail Card */}
+
+
+</View>
+<View style={styles.businessCard}>
+  <View style={{ flex: 1 }}>
+    <Text style={styles.businessTitle}>Tech Universe</Text>
+
+    <View style={styles.infoRow}>
+      <Ionicons name="location-outline" size={20} color="#FF6B6B" />
+      <Text style={styles.infoText}>USA, California, Silicon Valley</Text>
+    </View>
+
+    <View style={styles.infoRow}>
+      <Ionicons name="pricetag-outline" size={20} color="#4ECDC4" />
+      <Text style={styles.infoText}>Mobile, Laptop</Text>
+    </View>
+
+    <View style={styles.badgesContainer}>
+      <View style={[styles.badge, { backgroundColor: '#FF6B6B' }]}>
+        <Text style={styles.badgeText}>Mobile</Text>
       </View>
+      <View style={[styles.badge, { backgroundColor: '#4ECDC4' }]}>
+        <Text style={styles.badgeText}>Laptop</Text>
+      </View>
+    </View>
+  </View>
 
-      {/* Main content */}
+  {/* Lottie Animation */}
+  <View style={styles.animationContainer}>
+    <LottieView
+      source={require('../../assets/lottie/reales2.json')}
+      autoPlay
+      loop
+      style={{ width: 100, height: 100 }}
+    />
+  </View>
+</View>
 
-        <View style={styles.content}>
-          {/* Header Section */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Overview</Text>
-            {/* <Picker
-              style={styles.dropdown}
-              selectedValue="Last 30 Days"
-            >
-              <Picker.Item label="Last 30 Days" value="30" />
-              <Picker.Item label="Last 10 Days" value="10" />
-              <Picker.Item label="Last 7 Days" value="7" />
-            </Picker> */}
-          </View>
 
-          {/* Boxes Section */}
-          <View style={styles.boxesContainer}>
-            {/* First Row: Purchase and Sale */}
-            <View style={styles.row}>
-              {/* Purchase Box */}
-              <View style={styles.box}>
-                <Text style={[styles.boxLabel, {color:"white" ,backgroundColor: '#006600' }]}>Purchase</Text>
-                <Text style={styles.boxNumber}>450</Text>
-              </View>
 
-              {/* Sale Box */}
-              <View style={styles.box}>
-                <Text style={[styles.boxLabel, {color:"white",width:"40%", backgroundColor:"#9d0000" }]}>Sale</Text>
-                <Text style={styles.boxNumber}>50</Text>
-              </View>
-            </View>
+          <View style={styles.cardsContainer}>
+           
+<Statsection></Statsection>
 
-            {/* Second Row: Inventory */}
-            <View style={styles.row}>
-              {/* Inventory Box */}
-              <View style={[styles.box, styles.fullWidthBox]}>
-                <Text style={[styles.boxLabel, { color:"white", backgroundColor: '#3367B1' }]}>Inventory</Text>
-                <Text style={styles.boxNumber}>400</Text>
-              </View>
-            </View>
           </View>
 
           {/* Add Entry Button */}
-          <TouchableOpacity
-                   style={{ width:'100%' , alignSelf:"center"}}
-                   
-                 >
-                   <LinearGradient
-                     colors={['#3367B1', '#9285BF']}
-                     start={{ x: 0, y: 0 }}
-                     end={{ x: 1, y: 0 }}
-                     style={styles.button}
-                   >
-                     <Text style={styles.buttonText}>Add Entry</Text>
-                   </LinearGradient>
-                 </TouchableOpacity>
-        </View>
-    
-    </View>
- 
-  );
+          <TouchableOpacity style={styles.button}>
+         
+              <Text style={styles.buttonText}>Add Entry</Text>
+       
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+  )
+   
 };
 
 export default Index;
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex:1,
-    backgroundColor:"#fff"
-    
-    
-  },
-  cardContainer: {
-    position: 'absolute',
-    top: -30, // Adjust to overlap header (header height is 190, so place card near bottom of header)
-    left: '10%',
-    right: '10%',
-    width: '80%',
-    height: 100,
-    zIndex: 10, // Higher zIndex to ensure it’s above the header
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 4,
     flex: 1,
-    padding: 15,
-    height: '100%',
-    alignItems: 'center',
-  },
-  image: {
-    width: 80,
-    height: 80,
-    borderRadius: 50,
-    marginRight: 15,
-  },
-  textContainer: {
-    justifyContent: 'center',
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  email: {
-    fontSize: 14,
-    color: '#888',
-  },
-  content: {
-    marginTop: 70, // Adjusted to start content below the card (100 card height + some padding)
-    padding: 20,
-    flex: 1,
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    padding: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  dropdown: {
-    width: 150,
-    height: 40,
-  },
-  boxesContainer: {
-    flex: 1,
-  },
-  row: {
+  dividerContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginVertical: 20,
+  bottom:30,
+},
+dividerLine: {
+  flex: 1,
+  height: 1,
+  backgroundColor: '#333',
+},
+dividerText: {
+  marginHorizontal: 10,
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: 'bold',
+  fontFamily:"PlusSB"
+},
+
+  userSection: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    alignItems: 'center',
+    bottom:20,
+    marginVertical: 20,
+    paddingHorizontal: 16,
+  
   },
-  box: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 4,
-    padding: 15,
-    width: '48%',
-    height: 150,
-    justifyContent: 'center',
+  greeting: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#564dcc',
+  },
+  email: {
+    fontSize: 14,
+    color: '#bbb',
+    fontFamily:"PlusSB"
+  },
+  content: {
+    flex: 1,
+    bottom:35,
+    paddingHorizontal: 10,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 20,
+    fontFamily:"PlusSB"
+  },
+  cardsContainer: {
+ // lighter black box
+  borderRadius: 16,
+  padding: 0,
+  marginBottom: 20,
+  },
+  card: {
+   
+    borderRadius: 12,
+    padding: 16,
+    width: '47%',
+    marginBottom: 20,
     position: 'relative',
   },
-  fullWidthBox: {
-    width: '50%',
+  fullWidthCard: {
+    width: '100%',
   },
-  boxLabel: {
-    fontSize: 16,
-    padding:8,
-    width:"70%",
-    borderRadius:4,
+  cardLabelContainer: {
+    padding: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  cardLabel: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
-    position: 'absolute',
-   textAlign:"center",
-
-    top: 10,
-    left: 10,
   },
-  boxNumber: {
+  cardNumber: {
     fontSize: 36,
-    fontWeight: 500,
-    color: '#333',
-    textAlign: 'left',
-    top:10,
+    color: '#fff',
+    marginTop: 20,
+    fontWeight: '700',
   },
   button: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
     marginTop: 'auto',
-    bottom:70,
+    marginBottom: 20,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor:"#564dcc",
+    alignItems: 'center',
   },
+  
   buttonText: {
     color: '#fff',
     fontSize: 16,
-   
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
+  drawerContainer: {
+    flex: 1,
+    backgroundColor: '#1e1e1e',
+    padding: 16,
+  },
+  drawerTitle: {
+    fontSize: 20,
+    color: '#fff',
+    marginBottom: 20,
+  },
+  drawerItem: {
+    marginVertical: 10,
+  },
+  drawerText: {
+    color: '#ccc',
+    fontSize: 16,
+  },
+  businessCard: {
+  flexDirection: 'row',
+  backgroundColor: '#000',
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 20,
+  alignItems: 'center',
+  shadowColor: '#564dcc',
+  shadowOpacity: 0.6,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 4 },
+},
+businessTitle: {
+  color: '#fff',
+  fontSize: 20,
+  fontWeight: 'bold',
+  marginBottom: 10,
+  fontFamily: "PlusSB"
+},
+infoRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginVertical: 4,
+},
+infoText: {
+  color: '#bbb',
+  marginLeft: 8,
+  fontSize: 14,
+},
+badgesContainer: {
+  flexDirection: 'row',
+  marginTop: 10,
+},
+badge: {
+  borderRadius: 12,
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  marginRight: 8,
+},
+badgeText: {
+  color: '#fff',
+  fontSize: 12,
+  fontWeight: 'bold',
+},
+animationContainer: {
+  marginLeft: 16,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
 });

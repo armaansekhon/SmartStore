@@ -38,7 +38,7 @@ const Router=useRouter();
     >
       {/* Custom header without SafeAreaView */}
       <LinearGradient
-        colors={['#5B68DF', '#A270C1']}
+        colors={['#564dcc', '#564dcc']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: statusBarHeight + 20 }]} // extra space for notch
@@ -127,8 +127,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   label: {
-    fontSize: 16,
-    color: '#374151',
+    fontSize: 18,
+    color: '#000',
+      // fontWeight: 'light',
   },
   divider: {
     height: 1,

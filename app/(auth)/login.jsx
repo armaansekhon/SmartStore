@@ -47,10 +47,10 @@ const SignInScreen = () => {
       const firstLogin = response.firstLogin || 'False';
       if (firstLogin === 'True') {
         console.log('Redirecting to /BusinessDetails due to FirstLogin: True');
-        Router.push('/Bdetails');
+        Router.replace('/Bdetails');
       } else {
         console.log('Redirecting to /(drawer) due to FirstLogin:', firstLogin);
-        Router.push('/(drawer)');
+        Router.replace('/(drawer)');
       }
     } catch (err) {
       console.log('Login Error:', { error, message: err.message });
@@ -126,7 +126,7 @@ const SignInScreen = () => {
             disabled={loading}
           >
             <LinearGradient
-              colors={['#4A47A3', '#B295F8']}
+              colors={['#564dcc', '#564dcc']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[styles.button, loading && { opacity: 0.7 }]}
@@ -154,12 +154,13 @@ export default SignInScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: '#000',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flexGrow: 1,
     padding: 20,
+    paddingBottom:100,
     justifyContent: 'center',
   },
   logoPlaceholder: {
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   card: {
-    backgroundColor: '#111',
+    backgroundColor: '#000',
     borderRadius: 20,
     padding: 20,
     elevation: 5,
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '500',
     marginBottom: 30,
-    color: '#B295F8',
+    color: '#564dcc',
   },
   label: {
     fontSize: 16,
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   forgotText: {
-    color: '#B295F8',
+    color: '#564dcc',
     fontSize: 16,
   },
   button: {
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   linkText: {
-    color: '#B295F8',
+    color: '#564dcc',
     fontWeight: '600',
     top: 4,
     left: 7,
