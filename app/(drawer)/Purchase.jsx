@@ -102,7 +102,7 @@ const Purchase = () => {
         </View>
         <View style={styles.animationContainer}>
           <LottieView
-            source={require('../../assets/lottie/reales2.json')}
+            source={require('../../assets/lottie/sale.json')}
             autoPlay
             loop
             style={styles.lottieAnimation}
@@ -182,6 +182,8 @@ const styles = StyleSheet.create({
   lottieAnimation: {
     width: '100%',
     height: '100%',
+    transform:[{scale:1.2}],
+    // bottom:10,
   },
   searchContainer: {
     flexDirection: 'row',

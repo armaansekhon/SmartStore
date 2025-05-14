@@ -73,12 +73,12 @@ const Sale = () => {
       {/* Title and Animation */}
       <View style={styles.titleContainer}>
         <View style={styles.titleTextContainer}>
-          <Text style={styles.titleText}>Sale</Text>
+          <Text style={styles.titleText}>Sales</Text>
           <Text style={styles.subtitleText}>Here is the list of items for sale</Text>
         </View>
         <View style={styles.animationContainer}>
           <LottieView
-            source={require('../../assets/lottie/reales2.json')} // Ensure you have a Lottie JSON file
+            source={require('../../assets/lottie/purchase.json')} // Ensure you have a Lottie JSON file
             autoPlay
             loop
             style={styles.lottieAnimation}
@@ -147,10 +147,12 @@ const styles = StyleSheet.create({
   animationContainer: {
     width: 100,
     height: 100,
+    right:20
   },
   lottieAnimation: {
     width: '100%',
     height: '100%',
+    transform:[{scale:1.3}]
   },
   searchContainer: {
     flexDirection: 'row',

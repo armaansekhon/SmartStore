@@ -80,10 +80,11 @@ const Index = () => {
   {/* Lottie Animation */}
   <View style={styles.animationContainer}>
     <LottieView
-      source={require('../../assets/lottie/reales2.json')}
+      source={require('../../assets/lottie/ML.json')}
       autoPlay
       loop
-      style={{ width: 100, height: 100 }}
+      speed={0.5}
+      style={{ width: 110, height: 110 }}
     />
   </View>
 </View>

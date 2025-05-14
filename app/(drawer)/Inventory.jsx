@@ -130,9 +130,10 @@ const Inventory = () => {
               If not, replace with a valid Lottie file or remove the LottieView.
             */}
             <LottieView
-              source={require('../../assets/lottie/reales2.json')}
+              source={require('../../assets/lottie/inventory.json')}
               autoPlay
               loop
+              speed={0.7}
               style={styles.lottieAnimation}
               onError={() => console.warn('Lottie animation failed to load')}
               fallback={() => (
@@ -214,8 +215,8 @@ const styles = StyleSheet.create({
     height: 100,
   },
   lottieAnimation: {
-    width: '100%',
-    height: '100%',
+    width: '120%',
+    height: '120%',
   },
   lottieFallback: {
     width: '100%',
