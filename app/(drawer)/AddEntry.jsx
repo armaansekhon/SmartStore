@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import PurchaseForm from '../../components/ui/PurchaseForm';
 import SaleForm from '../../components/ui/SaleForm';
 import { Alert } from 'react-native';
+import { useNavigation } from 'expo-router';
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -35,6 +36,7 @@ class ErrorBoundary extends Component {
 }
 
 const AddEntry = () => {
+  const Nav =useNavigation()
   const [activeTab, setActiveTab] = useState('purchase');
 
   const handleSave = () => {
@@ -51,10 +53,15 @@ const AddEntry = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity accessibilityLabel="Open menu" accessibilityRole="button">
-            <Ionicons name="menu" size={28} color="#fff" />
+            <Ionicons name="menu"  size={28} color="#fff"  
+            onPress={()=>{Nav.openDrawer()}}
+            
+            />
           </TouchableOpacity>
           <TouchableOpacity accessibilityLabel="Back" accessibilityRole="button">
-            <Ionicons name="arrow-back" size={28} color="#fff" />
+            <Ionicons name="arrow-back" size={28} 
+              onPress={()=>{Nav.goBack()}}
+            color="#fff" />
           </TouchableOpacity>
         </View>
 

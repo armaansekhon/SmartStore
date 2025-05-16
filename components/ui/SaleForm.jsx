@@ -196,7 +196,7 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
   );
 };
 
-// Seller Details Component
+// Buyer Details Component
 const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -327,7 +327,7 @@ const SaleForm = ({ onSave, onCancel }) => {
     description: '',
     batteryHealth: '',
   });
-  const [sellerDetails, setSellerDetails] = useState({ name: '', phone: '', village: '' });
+  const [buyerDetails, setBuyerDetails] = useState({ name: '', phone: '', village: '' });
   const [images, setImages] = useState([]);
   const [documents, setDocuments] = useState([]);
 
@@ -344,7 +344,7 @@ const SaleForm = ({ onSave, onCancel }) => {
       Alert.alert('Error', 'Please enter both IMEI numbers.');
       return;
     }
-    console.log('Sale Form Data:', { formData, sellerDetails, images, documents });
+    console.log('Sale Form Data:', { formData, buyerDetails, images, documents });
     onSave();
   };
 
@@ -352,9 +352,9 @@ const SaleForm = ({ onSave, onCancel }) => {
     <ScrollView style={styles.formContainer}>
       <CommonFormFields formData={formData} setFormData={setFormData} images={images} setImages={setImages} />
       <DetailsForm
-        type="Seller"
-        details={sellerDetails}
-        setDetails={setSellerDetails}
+        type="Buyer"
+        details={buyerDetails}
+        setDetails={setBuyerDetails}
         documents={documents}
         setDocuments={setDocuments}
       />

@@ -310,7 +310,7 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
   );
 };
 
-// Buyer Details Component
+// Seller Details Component
 const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -441,7 +441,7 @@ const PurchaseForm = ({ onSave, onCancel }) => {
     description: '',
     batteryHealth: '',
   });
-  const [buyerDetails, setBuyerDetails] = useState({ name: '', phone: '', village: '' });
+  const [sellerDetails, setSellerDetails] = useState({ name: '', phone: '', village: '' });
   const [images, setImages] = useState([]);
   const [documents, setDocuments] = useState([]);
 
@@ -458,7 +458,7 @@ const PurchaseForm = ({ onSave, onCancel }) => {
       Alert.alert('Error', 'Please enter both IMEI numbers.');
       return;
     }
-    console.log('Purchase Form Data:', { formData, buyerDetails, images, documents });
+    console.log('Purchase Form Data:', { formData, sellerDetails, images, documents });
     onSave();
   };
 
@@ -466,9 +466,9 @@ const PurchaseForm = ({ onSave, onCancel }) => {
     <ScrollView style={styles.formContainer}>
       <CommonFormFields formData={formData} setFormData={setFormData} images={images} setImages={setImages} />
       <DetailsForm
-        type="Buyer"
-        details={buyerDetails}
-        setDetails={setBuyerDetails}
+        type="Seller"
+        details={sellerDetails}
+        setDetails={setSellerDetails}
         documents={documents}
         setDocuments={setDocuments}
       />
@@ -501,9 +501,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    marginBottom:80,
-  
-
+    marginBottom: 80,
   },
   label: {
     fontSize: 16,
@@ -637,6 +635,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#dc2626',
+    borderWidth:1,
     borderRadius: 8,
     padding: 12,
     flex: 1,
