@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,21 +17,32 @@ import {
   Ionicons,
 } from '@expo/vector-icons';
 import { getStatusBarHeight } from 'react-native-status-bar-height';
+import useLogout from '../../hooks/useLogout';
 
 const drawerItems = [
-   { label: 'Home', icon: <MaterialIcons name="house" size={22} color="#374151" />, route: '/' },
+  { label: 'Home', icon: <MaterialIcons name="house" size={22} color="#374151" />, route: '/' },
   { label: 'Sale', icon: <MaterialIcons name="sell" size={22} color="#374151" />, route: '/Sale' },
   { label: 'Purchase', icon: <Feather name="shopping-bag" size={22} color="#374151" />, route: '/Purchase' },
   { label: 'Inventory', icon: <Ionicons name="cube-outline" size={22} color="#374151" />, route: 'Inventory' },
   { label: 'Add Entry', icon: <Ionicons name="add" size={22} color="#374151" />, route: 'AddEntry' },
   { label: 'Account', icon: <MaterialIcons name="person-outline" size={22} color="#374151" />, route: 'Account' },
   { label: 'Change Password', icon: <Feather name="key" size={22} color="#374151" />, route: 'ChangePass' },
-  { label: 'Logout', icon: <MaterialIcons name="logout" size={22} color="#374151" />, route: 'logout' },
+  { label: 'Logout', icon: <MaterialIcons name="logout" size={22} color="#374151" /> }, // No route for Logout
 ];
 
 const CustomDrawerContent = (props) => {
-const Router=useRouter();
+  const Router = useRouter();
+  const { logout, isLoading, error } = useLogout();
   const statusBarHeight = getStatusBarHeight();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      Alert.alert('Success', 'Logged out successfully.');
+    } catch (err) {
+      Alert.alert('Error', error || 'Failed to log out.');
+    }
+  };
 
   return (
     <DrawerContentScrollView
@@ -45,10 +57,10 @@ const Router=useRouter();
         style={[styles.header, { paddingTop: statusBarHeight + 20 }]} // extra space for notch
       >
         <View style={styles.userInfo}>
-        <Image
-      source={{ uri: 'https://i.pravatar.cc/100' }}
-      style={styles.avatar}
-    />
+          <Image
+            source={{ uri: 'https://i.pravatar.cc/100' }}
+            style={styles.avatar}
+          />
           <View>
             <Text style={styles.name}>Amritpal Singh</Text>
             <Text style={styles.email}>amrit@gmail.com</Text>
@@ -61,12 +73,19 @@ const Router=useRouter();
         {drawerItems.map((item, index) => (
           <TouchableOpacity
             key={index}
-            onPress={() => Router.push(item.route)}
+            onPress={
+              item.label === 'Logout'
+                ? handleLogout
+                : () => Router.push(item.route)
+            }
             style={styles.drawerItem}
+            disabled={item.label === 'Logout' && isLoading}
           >
             <View style={styles.iconLabel}>
               {item.icon}
-              <Text style={styles.label}>{item.label}</Text>
+              <Text style={styles.label}>
+                {item.label === 'Logout' && isLoading ? 'Logging out...' : item.label}
+              </Text>
             </View>
             <View style={styles.divider} />
           </TouchableOpacity>
@@ -78,14 +97,12 @@ const Router=useRouter();
 
 const styles = StyleSheet.create({
   header: {
-   
     paddingHorizontal: 20,
-   
     width: '120%',
-    height:'28%',
-    left:-20,
-    marginTop:-100,
-    marginBottom:20,
+    height: '28%',
+    left: -20,
+    marginTop: -100,
+    marginBottom: 20,
     position: 'relative',
     justifyContent: 'flex-end',
   },
@@ -102,8 +119,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     marginRight: 10,
-    zIndex:10,
-    
+    zIndex: 10,
   },
   name: {
     color: '#fff',
@@ -130,7 +146,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     color: '#000',
-      // fontWeight: 'light',
   },
   divider: {
     height: 1,

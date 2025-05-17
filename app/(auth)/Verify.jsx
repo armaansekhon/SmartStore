@@ -85,7 +85,7 @@ const Verify = () => {
       console.log('Verify OTP Payload:', payload);
       await verifyOTP(payload);
       Alert.alert('Success', 'OTP verified successfully!');
-      Router.push('/Bdetails');
+      Router.replace('/Bdetails');
     } catch (err) {
       console.log('Verify OTP Error:', { error, message: err.message });
       Alert.alert('Error', error || 'Failed to verify OTP. Please try again.');

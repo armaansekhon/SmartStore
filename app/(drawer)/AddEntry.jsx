@@ -106,6 +106,7 @@ export default AddEntry;
 
 const styles = StyleSheet.create({
   safeArea: {
+    paddingTop:38,
     flex: 1,
     backgroundColor: '#000',
   },

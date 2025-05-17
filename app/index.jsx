@@ -9,7 +9,7 @@ const index = () => {
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      Router.replace('/SignUp');
+      Router.replace('/login');
     }, 0); // Wait until after mount
 
     return () => clearTimeout(timeout);

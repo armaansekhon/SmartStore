@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { CameraView, Camera } from 'expo-camera';
+import useUploadPurchaseData from '../../hooks/useUploadPurchaseData';
 
 // Common Form Fields Component
 const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
@@ -68,7 +69,6 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
       } else if (scannerField === 'imei2') {
         setFormData({ ...formData, imei2: data });
       } else {
-        // Try to split data if it contains multiple IMEIs (e.g., "123456789012345,987654321098765")
         const imeiParts = data.split(',').map((part) => part.trim());
         if (imeiParts.length === 2) {
           setFormData({ ...formData, imei1: imeiParts[0], imei2: imeiParts[1] });
@@ -234,6 +234,17 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
         placeholderTextColor="#888"
         keyboardType="numeric"
         accessibilityLabel="Battery health"
+      />
+
+      <Text style={styles.label}>Price</Text>
+      <TextInput
+        style={styles.input}
+        value={formData.price}
+        onChangeText={(text) => setFormData({ ...formData, price: text })}
+        placeholder="Enter price"
+        placeholderTextColor="#888"
+        keyboardType="numeric"
+        accessibilityLabel="Price"
       />
 
       <Text style={styles.label}>Images</Text>
@@ -440,14 +451,17 @@ const PurchaseForm = ({ onSave, onCancel }) => {
     imei2: '',
     description: '',
     batteryHealth: '',
+    price: '',
   });
   const [sellerDetails, setSellerDetails] = useState({ name: '', phone: '', village: '' });
   const [images, setImages] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const { uploadData, isLoading, error, success } = useUploadPurchaseData();
 
-  const handleSave = () => {
-    if (!formData.name || !formData.serialType || !formData.batteryHealth) {
-      Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health).');
+  const handleSave = async () => {
+    // Validate form fields
+    if (!formData.name || !formData.serialType || !formData.batteryHealth || !formData.price) {
+      Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price).');
       return;
     }
     if (formData.serialType === 'serial' && !formData.serialNumber) {
@@ -458,8 +472,31 @@ const PurchaseForm = ({ onSave, onCancel }) => {
       Alert.alert('Error', 'Please enter both IMEI numbers.');
       return;
     }
-    console.log('Purchase Form Data:', { formData, sellerDetails, images, documents });
-    onSave();
+    if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+      Alert.alert('Error', 'Please enter a valid price greater than 0.');
+      return;
+    }
+
+    try {
+      await uploadData(formData, sellerDetails);
+      Alert.alert('Success', 'Purchase data uploaded successfully.');
+      setFormData({
+        name: '',
+        serialType: '',
+        serialNumber: '',
+        imei1: '',
+        imei2: '',
+        description: '',
+        batteryHealth: '',
+        price: '',
+      });
+      setSellerDetails({ name: '', phone: '', village: '' });
+      setImages([]);
+      setDocuments([]);
+      onSave();
+    } catch (err) {
+      Alert.alert('Error', error || 'Failed to upload purchase data.');
+    }
   };
 
   return (
@@ -474,12 +511,13 @@ const PurchaseForm = ({ onSave, onCancel }) => {
       />
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={styles.saveButton}
+          style={[styles.saveButton, isLoading && styles.disabledButton]}
           onPress={handleSave}
+          disabled={isLoading}
           accessibilityLabel="Save purchase"
           accessibilityRole="button"
         >
-          <Text style={styles.buttonText}>Save</Text>
+          <Text style={styles.buttonText}>{isLoading ? 'Saving...' : 'Save'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.cancelButton}
@@ -501,7 +539,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    marginBottom: 80,
+    marginBottom: 100,
   },
   label: {
     fontSize: 16,
@@ -633,9 +671,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
+  disabledButton: {
+    backgroundColor: '#3a3a3a',
+    opacity: 0.7,
+  },
   cancelButton: {
     backgroundColor: '#dc2626',
-    borderWidth:1,
     borderRadius: 8,
     padding: 12,
     flex: 1,

@@ -98,7 +98,7 @@ const Index = () => {
           </View>
 
           {/* Add Entry Button */}
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity onPress={()=>router.push("/AddEntry")} style={styles.button}>
          
               <Text style={styles.buttonText}>Add Entry</Text>
        

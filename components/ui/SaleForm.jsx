@@ -3,10 +3,14 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Image, S
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { CameraView, Camera } from 'expo-camera';
+import useUploadSaleData from './useUploadSaleData';
 
 // Common Form Fields Component
 const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [scannerField, setScannerField] = useState(null); // Tracks which field to autofill (serialNumber, imei1, imei2)
 
   const dropdownOptions = [
     { label: 'Select Type', value: '' },
@@ -39,6 +43,42 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
 
   const removeImage = (id) => {
     setImages(images.filter((image) => image.id !== id));
+  };
+
+  const handleScan = async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Please grant camera access to scan QR codes or barcodes.');
+      return;
+    }
+    setScannerVisible(true);
+  };
+
+  const onBarcodeScanned = ({ data }) => {
+    setScannerVisible(false);
+    if (!data) {
+      Alert.alert('Error', 'No data found in QR code or barcode.');
+      return;
+    }
+
+    if (formData.serialType === 'serial' && scannerField === 'serialNumber') {
+      setFormData({ ...formData, serialNumber: data });
+    } else if (formData.serialType === 'imei') {
+      if (scannerField === 'imei1') {
+        setFormData({ ...formData, imei1: data });
+      } else if (scannerField === 'imei2') {
+        setFormData({ ...formData, imei2: data });
+      } else {
+        const imeiParts = data.split(',').map((part) => part.trim());
+        if (imeiParts.length === 2) {
+          setFormData({ ...formData, imei1: imeiParts[0], imei2: imeiParts[1] });
+        } else {
+          setFormData({ ...formData, imei1: data });
+        }
+      }
+    } else {
+      Alert.alert('Error', 'Please select Serial Number or IMEI Number first.');
+    }
   };
 
   return (
@@ -100,37 +140,76 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
       {formData.serialType === 'serial' && (
         <>
           <Text style={styles.label}>Serial Number</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.serialNumber}
-            onChangeText={(text) => setFormData({ ...formData, serialNumber: text })}
-            placeholder="Enter serial number"
-            placeholderTextColor="#888"
-            accessibilityLabel="Serial number"
-          />
+          <View style={styles.inputWithIcon}>
+            <TextInput
+              style={[styles.input, styles.inputWithIconInput]}
+              value={formData.serialNumber}
+              onChangeText={(text) => setFormData({ ...formData, serialNumber: text })}
+              placeholder="Enter serial number"
+              placeholderTextColor="#888"
+              accessibilityLabel="Serial number"
+            />
+            <TouchableOpacity
+              style={styles.scanIcon}
+              onPress={() => {
+                setScannerField('serialNumber');
+                handleScan();
+              }}
+              accessibilityLabel="Scan serial number"
+              accessibilityRole="button"
+            >
+              <Ionicons name="barcode-outline" size={24} color="#564dcc" />
+            </TouchableOpacity>
+          </View>
         </>
       )}
 
       {formData.serialType === 'imei' && (
         <>
           <Text style={styles.label}>IMEI Number 1</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.imei1}
-            onChangeText={(text) => setFormData({ ...formData, imei1: text })}
-            placeholder="Enter IMEI number 1"
-            placeholderTextColor="#888"
-            accessibilityLabel="IMEI number 1"
-          />
+          <View style={styles.inputWithIcon}>
+            <TextInput
+              style={[styles.input, styles.inputWithIconInput]}
+              value={formData.imei1}
+              onChangeText={(text) => setFormData({ ...formData, imei1: text })}
+              placeholder="Enter IMEI number 1"
+              placeholderTextColor="#888"
+              accessibilityLabel="IMEI number 1"
+            />
+            <TouchableOpacity
+              style={styles.scanIcon}
+              onPress={() => {
+                setScannerField('imei1');
+                handleScan();
+              }}
+              accessibilityLabel="Scan IMEI number 1"
+              accessibilityRole="button"
+            >
+              <Ionicons name="barcode-outline" size={24} color="#564dcc" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.label}>IMEI Number 2</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.imei2}
-            onChangeText={(text) => setFormData({ ...formData, imei2: text })}
-            placeholder="Enter IMEI number 2"
-            placeholderTextColor="#888"
-            accessibilityLabel="IMEI number 2"
-          />
+          <View style={styles.inputWithIcon}>
+            <TextInput
+              style={[styles.input, styles.inputWithIconInput]}
+              value={formData.imei2}
+              onChangeText={(text) => setFormData({ ...formData, imei2: text })}
+              placeholder="Enter IMEI number 2"
+              placeholderTextColor="#888"
+              accessibilityLabel="IMEI number 2"
+            />
+            <TouchableOpacity
+              style={styles.scanIcon}
+              onPress={() => {
+                setScannerField('imei2');
+                handleScan();
+              }}
+              accessibilityLabel="Scan IMEI number 2"
+              accessibilityRole="button"
+            >
+              <Ionicons name="barcode-outline" size={24} color="#564dcc" />
+            </TouchableOpacity>
+          </View>
         </>
       )}
 
@@ -155,6 +234,17 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
         placeholderTextColor="#888"
         keyboardType="numeric"
         accessibilityLabel="Battery health"
+      />
+
+      <Text style={styles.label}>Price</Text>
+      <TextInput
+        style={styles.input}
+        value={formData.price}
+        onChangeText={(text) => setFormData({ ...formData, price: text })}
+        placeholder="Enter price"
+        placeholderTextColor="#888"
+        keyboardType="numeric"
+        accessibilityLabel="Price"
       />
 
       <Text style={styles.label}>Images</Text>
@@ -191,6 +281,41 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
             showsHorizontalScrollIndicator={false}
           />
         </>
+      )}
+
+      {scannerVisible && (
+        <Modal
+          visible={scannerVisible}
+          animationType="slide"
+          onRequestClose={() => setScannerVisible(false)}
+        >
+          <View style={styles.scannerContainer}>
+            <CameraView
+              style={styles.camera}
+              facing="back"
+              onBarcodeScanned={onBarcodeScanned}
+              barcodeScannerSettings={{
+                barcodeTypes: [
+                  'qr',
+                  'code128',
+                  'code39',
+                  'ean13',
+                  'ean8',
+                  'upc_a',
+                  'upc_e',
+                ],
+              }}
+            />
+            <TouchableOpacity
+              style={styles.closeScannerButton}
+              onPress={() => setScannerVisible(false)}
+              accessibilityLabel="Close scanner"
+              accessibilityRole="button"
+            >
+              <Text style={styles.closeScannerText}>Close Scanner</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
       )}
     </>
   );
@@ -326,14 +451,16 @@ const SaleForm = ({ onSave, onCancel }) => {
     imei2: '',
     description: '',
     batteryHealth: '',
+    price: '',
   });
   const [buyerDetails, setBuyerDetails] = useState({ name: '', phone: '', village: '' });
   const [images, setImages] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const { uploadData, isLoading, error, success } = useUploadSaleData();
 
-  const handleSave = () => {
-    if (!formData.name || !formData.serialType || !formData.batteryHealth) {
-      Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health).');
+  const handleSave = async () => {
+    if (!formData.name || !formData.serialType || !formData.batteryHealth || !formData.price) {
+      Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price).');
       return;
     }
     if (formData.serialType === 'serial' && !formData.serialNumber) {
@@ -344,8 +471,31 @@ const SaleForm = ({ onSave, onCancel }) => {
       Alert.alert('Error', 'Please enter both IMEI numbers.');
       return;
     }
-    console.log('Sale Form Data:', { formData, buyerDetails, images, documents });
-    onSave();
+    if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+      Alert.alert('Error', 'Please enter a valid price greater than 0.');
+      return;
+    }
+
+    try {
+      await uploadData(formData, buyerDetails);
+      Alert.alert('Success', 'Sale data uploaded successfully.');
+      setFormData({
+        name: '',
+        serialType: '',
+        serialNumber: '',
+        imei1: '',
+        imei2: '',
+        description: '',
+        batteryHealth: '',
+        price: '',
+      });
+      setBuyerDetails({ name: '', phone: '', village: '' });
+      setImages([]);
+      setDocuments([]);
+      onSave();
+    } catch (err) {
+      Alert.alert('Error', error || 'Failed to upload sale data.');
+    }
   };
 
   return (
@@ -360,12 +510,13 @@ const SaleForm = ({ onSave, onCancel }) => {
       />
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={styles.saveButton}
+          style={[styles.saveButton, isLoading && styles.disabledButton]}
           onPress={handleSave}
+          disabled={isLoading}
           accessibilityLabel="Save sale"
           accessibilityRole="button"
         >
-          <Text style={styles.buttonText}>Save</Text>
+          <Text style={styles.buttonText}>{isLoading ? 'Saving...' : 'Save'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.cancelButton}
@@ -387,6 +538,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 10,
+    marginBottom: 100,
   },
   label: {
     fontSize: 16,
@@ -403,6 +555,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     borderWidth: 1,
     borderColor: '#3a3a3a',
+  },
+  inputWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputWithIconInput: {
+    flex: 1,
+  },
+  scanIcon: {
+    marginLeft: 10,
+    padding: 8,
   },
   dropdownContainer: {
     flexDirection: 'row',
@@ -507,6 +670,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
+  disabledButton: {
+    backgroundColor: '#3a3a3a',
+    opacity: 0.7,
+  },
   cancelButton: {
     backgroundColor: '#dc2626',
     borderRadius: 8,
@@ -515,6 +682,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scannerContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  camera: {
+    flex: 1,
+  },
+  closeScannerButton: {
+    backgroundColor: '#dc2626',
+    padding: 12,
+    alignItems: 'center',
+    margin: 20,
+    borderRadius: 8,
+  },
+  closeScannerText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

@@ -4,10 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 const Sale = () => {
   // Sample data for the list
   const Nav= useNavigation()
+  const Router=useRouter();
   const [saleData, setSaleData] = useState([
     { id: '1', name: 'iPhone 13 Pro Max', description: 'Phone is in excellent condition', batteryHealth: '100%', price: '₹54,677', warranty: 'IN WARRANTY' },
     { id: '2', name: 'iPhone 12 Pro', description: 'Phone is in good condition', batteryHealth: '85%', price: '₹45,000', warranty: 'OUT OF WARRANTY' },
@@ -66,7 +68,7 @@ const Sale = () => {
           <Ionicons name="menu" size={28} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity>
-          <Ionicons name="add" size={28} color="#fff" />
+          <Ionicons name="add"  onPress={()=>{Router.push("/AddEntry")}} size={28} color="#fff" />
         </TouchableOpacity>
       </View>
 
