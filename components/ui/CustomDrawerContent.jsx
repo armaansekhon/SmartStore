@@ -18,6 +18,7 @@ import {
 } from '@expo/vector-icons';
 import { getStatusBarHeight } from 'react-native-status-bar-height';
 import useLogout from '../../hooks/useLogout';
+import * as SecureStore from 'expo-secure-store'
 
 const drawerItems = [
   { label: 'Home', icon: <MaterialIcons name="house" size={22} color="#374151" />, route: '/' },
@@ -34,6 +35,8 @@ const CustomDrawerContent = (props) => {
   const Router = useRouter();
   const { logout, isLoading, error } = useLogout();
   const statusBarHeight = getStatusBarHeight();
+
+  const name=SecureStore.getItem('username')
 
   const handleLogout = async () => {
     try {

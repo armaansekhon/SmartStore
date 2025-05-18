@@ -9,13 +9,22 @@ import useUploadSaleData from './useUploadSaleData';
 // Common Form Fields Component
 const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [statusDropdownVisible, setStatusDropdownVisible] = useState(false);
   const [scannerVisible, setScannerVisible] = useState(false);
-  const [scannerField, setScannerField] = useState(null); // Tracks which field to autofill (serialNumber, imei1, imei2)
+  const [scannerField, setScannerField] = useState(null);
 
   const dropdownOptions = [
     { label: 'Select Type', value: '' },
     { label: 'Serial Number', value: 'serial' },
     { label: 'IMEI Number', value: 'imei' },
+  ];
+
+  const statusOptions = [
+    { label: 'Warranty', value: '0' },
+    { label: 'Out of Warranty', value: '1' },
+    { label: 'Damaged', value: '2' },
+    { label: 'Lost', value: '3' },
+    { label: 'Stolen', value: '4' },
   ];
 
   const handleImageUpload = async () => {
@@ -213,6 +222,50 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
         </>
       )}
 
+      <Text style={styles.label}>Product Status</Text>
+      <TouchableOpacity
+        style={styles.dropdownContainer}
+        onPress={() => setStatusDropdownVisible(true)}
+        accessibilityLabel="Select product status"
+        accessibilityRole="button"
+      >
+        <Text style={styles.dropdownText}>
+          {statusOptions.find((option) => option.value === formData.productStatus)?.label || 'Select Status'}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color="#fff" />
+      </TouchableOpacity>
+
+      <Modal
+        visible={statusDropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setStatusDropdownVisible(false)}
+          accessibilityLabel="Close status dropdown"
+          accessibilityRole="button"
+        >
+          <View style={styles.dropdownModal}>
+            {statusOptions.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={styles.dropdownOption}
+                onPress={() => {
+                  setFormData({ ...formData, productStatus: option.value });
+                  setStatusDropdownVisible(false);
+                }}
+                accessibilityLabel={option.label}
+                accessibilityRole="menuitem"
+              >
+                <Text style={styles.dropdownOptionText}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Text style={styles.label}>Description</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -328,7 +381,7 @@ const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => 
   const handleDocumentUpload = async () => {
     try {
       const results = await DocumentPicker.getDocumentAsync({
-        type: '*/*', // Allow all file types
+        type: '*/*',
         multiple: true,
       });
 
@@ -417,7 +470,7 @@ const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => 
                     <Image
                       source={{ uri: item.uri }}
                       style={styles.previewImage}
-                      onError={() => console.warn(`Failed to load document: ${item.name}`)}
+                      onError={() => console.warn(`Failed to load |document: ${item.name}`)}
                     />
                     <TouchableOpacity
                       style={styles.removeButton}
@@ -452,6 +505,7 @@ const SaleForm = ({ onSave, onCancel }) => {
     description: '',
     batteryHealth: '',
     price: '',
+    productStatus: '',
   });
   const [buyerDetails, setBuyerDetails] = useState({ name: '', phone: '', village: '' });
   const [images, setImages] = useState([]);
@@ -459,8 +513,8 @@ const SaleForm = ({ onSave, onCancel }) => {
   const { uploadData, isLoading, error, success } = useUploadSaleData();
 
   const handleSave = async () => {
-    if (!formData.name || !formData.serialType || !formData.batteryHealth || !formData.price) {
-      Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price).');
+    if (!formData.name || !formData.serialType || !formData.batteryHealth || !formData.price || formData.productStatus === '') {
+      Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price, Product Status).');
       return;
     }
     if (formData.serialType === 'serial' && !formData.serialNumber) {
@@ -475,9 +529,15 @@ const SaleForm = ({ onSave, onCancel }) => {
       Alert.alert('Error', 'Please enter a valid price greater than 0.');
       return;
     }
+    if (isNaN(parseInt(formData.productStatus)) || parseInt(formData.productStatus) < 0 || parseInt(formData.productStatus) > 4) {
+      Alert.alert('Error', 'Please select a valid product status.');
+      return;
+    }
+
+    console.log('Form Data before upload:', JSON.stringify(formData, null, 2)); // Debug log
 
     try {
-      await uploadData(formData, buyerDetails);
+      await uploadData(formData, buyerDetails, images, documents);
       Alert.alert('Success', 'Sale data uploaded successfully.');
       setFormData({
         name: '',
@@ -488,6 +548,7 @@ const SaleForm = ({ onSave, onCancel }) => {
         description: '',
         batteryHealth: '',
         price: '',
+        productStatus: '',
       });
       setBuyerDetails({ name: '', phone: '', village: '' });
       setImages([]);

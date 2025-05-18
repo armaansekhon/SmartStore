@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Image, ScrollView, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,13 +9,22 @@ import useUploadPurchaseData from '../../hooks/useUploadPurchaseData';
 // Common Form Fields Component
 const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [statusDropdownVisible, setStatusDropdownVisible] = useState(false);
   const [scannerVisible, setScannerVisible] = useState(false);
-  const [scannerField, setScannerField] = useState(null); // Tracks which field to autofill (serialNumber, imei1, imei2)
+  const [scannerField, setScannerField] = useState(null);
 
   const dropdownOptions = [
     { label: 'Select Type', value: '' },
     { label: 'Serial Number', value: 'serial' },
     { label: 'IMEI Number', value: 'imei' },
+  ];
+
+  const statusOptions = [
+    { label: 'Warranty', value: '0' },
+    { label: 'Out of Warranty', value: '1' },
+    { label: 'Damaged', value: '2' },
+    { label: 'Lost', value: '3' },
+    { label: 'Stolen', value: '4' },
   ];
 
   const handleImageUpload = async () => {
@@ -213,6 +222,50 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
         </>
       )}
 
+      <Text style={styles.label}>Product Status</Text>
+      <TouchableOpacity
+        style={styles.dropdownContainer}
+        onPress={() => setStatusDropdownVisible(true)}
+        accessibilityLabel="Select product status"
+        accessibilityRole="button"
+      >
+        <Text style={styles.dropdownText}>
+          {statusOptions.find((option) => option.value === formData.status)?.label || 'Select Status'}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color="#fff" />
+      </TouchableOpacity>
+
+      <Modal
+        visible={statusDropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setStatusDropdownVisible(false)}
+          accessibilityLabel="Close status dropdown"
+          accessibilityRole="button"
+        >
+          <View style={styles.dropdownModal}>
+            {statusOptions.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={styles.dropdownOption}
+                onPress={() => {
+                  setFormData({ ...formData, status: option.value });
+                  setStatusDropdownVisible(false);
+                }}
+                accessibilityLabel={option.label}
+                accessibilityRole="menuitem"
+              >
+                <Text style={styles.dropdownOptionText}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Text style={styles.label}>Description</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -328,7 +381,7 @@ const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => 
   const handleDocumentUpload = async () => {
     try {
       const results = await DocumentPicker.getDocumentAsync({
-        type: '*/*', // Allow all file types
+        type: '*/*',
         multiple: true,
       });
 
@@ -442,7 +495,7 @@ const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => 
 };
 
 // Purchase Form Component
-const PurchaseForm = ({ onSave, onCancel }) => {
+const PurchaseForm = ({ onSave, onCancel, initialData = {}, initialSellerDetails = {}, productId }) => {
   const [formData, setFormData] = useState({
     name: '',
     serialType: '',
@@ -452,34 +505,22 @@ const PurchaseForm = ({ onSave, onCancel }) => {
     description: '',
     batteryHealth: '',
     price: '',
+    status: '',
+    ...initialData,
   });
-  const [sellerDetails, setSellerDetails] = useState({ name: '', phone: '', village: '' });
+  const [sellerDetails, setSellerDetails] = useState({
+    name: '',
+    phone: '',
+    village: '',
+    ...initialSellerDetails,
+  });
   const [images, setImages] = useState([]);
   const [documents, setDocuments] = useState([]);
   const { uploadData, isLoading, error, success } = useUploadPurchaseData();
 
-  const handleSave = async () => {
-    // Validate form fields
-    if (!formData.name || !formData.serialType || !formData.batteryHealth || !formData.price) {
-      Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price).');
-      return;
-    }
-    if (formData.serialType === 'serial' && !formData.serialNumber) {
-      Alert.alert('Error', 'Please enter a serial number.');
-      return;
-    }
-    if (formData.serialType === 'imei' && (!formData.imei1 || !formData.imei2)) {
-      Alert.alert('Error', 'Please enter both IMEI numbers.');
-      return;
-    }
-    if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
-      Alert.alert('Error', 'Please enter a valid price greater than 0.');
-      return;
-    }
-
-    try {
-      await uploadData(formData, sellerDetails);
-      Alert.alert('Success', 'Purchase data uploaded successfully.');
+  useEffect(() => {
+    if (success) {
+      Alert.alert('Success', productId ? 'Purchase updated successfully.' : 'Purchase data uploaded successfully.');
       setFormData({
         name: '',
         serialType: '',
@@ -489,13 +530,48 @@ const PurchaseForm = ({ onSave, onCancel }) => {
         description: '',
         batteryHealth: '',
         price: '',
+        status: '',
       });
       setSellerDetails({ name: '', phone: '', village: '' });
       setImages([]);
       setDocuments([]);
       onSave();
+    }
+    if (error) {
+      Alert.alert('Error', error);
+    }
+  }, [success, error, onSave, productId]);
+
+  const handleSave = async () => {
+    // Validation relaxed for updates: only check critical fields if creating new
+    if (!productId) {
+      if (!formData.name || !formData.serialType || !formData.batteryHealth || !formData.price || formData.status === '') {
+        Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price, Product Status).');
+        return;
+      }
+      if (formData.serialType === 'serial' && !formData.serialNumber) {
+        Alert.alert('Error', 'Please enter a serial number.');
+        return;
+      }
+      if (formData.serialType === 'imei' && (!formData.imei1 || !formData.imei2)) {
+        Alert.alert('Error', 'Please enter both IMEI numbers.');
+        return;
+      }
+    }
+
+    if (formData.price && (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0)) {
+      Alert.alert('Error', 'Please enter a valid price greater than 0.');
+      return;
+    }
+    if (formData.status && (isNaN(parseInt(formData.status)) || parseInt(formData.status) < 0 || parseInt(formData.status) > 4)) {
+      Alert.alert('Error', 'Please select a valid product status.');
+      return;
+    }
+
+    try {
+      await uploadData(formData, sellerDetails, productId || '-1');
     } catch (err) {
-      Alert.alert('Error', error || 'Failed to upload purchase data.');
+      // Error handled in useEffect
     }
   };
 
@@ -514,10 +590,10 @@ const PurchaseForm = ({ onSave, onCancel }) => {
           style={[styles.saveButton, isLoading && styles.disabledButton]}
           onPress={handleSave}
           disabled={isLoading}
-          accessibilityLabel="Save purchase"
+          accessibilityLabel={productId ? "Update purchase" : "Save purchase"}
           accessibilityRole="button"
         >
-          <Text style={styles.buttonText}>{isLoading ? 'Saving...' : 'Save'}</Text>
+          <Text style={styles.buttonText}>{isLoading ? 'Saving...' : productId ? 'Update' : 'Save'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.cancelButton}

@@ -7,21 +7,19 @@ const useUploadPurchaseData = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  const uploadData = async (formData, sellerDetails) => {
+  const uploadData = async (formData, sellerDetails, id = '-1') => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
 
     try {
-      // Retrieve access token from SecureStore
       const accessToken = await SecureStore.getItemAsync('accessToken');
       if (!accessToken) {
         throw new Error('No access token found. Please log in.');
       }
 
-      // Construct JSON payload
       const payload = {
-        id: '-1',
+        id: id,
         Name: formData.name || '',
         Description: formData.description || '',
         BatteryHealth: parseInt(formData.batteryHealth) || 0,
@@ -30,13 +28,15 @@ const useUploadPurchaseData = () => {
         SerialNumber: formData.serialNumber || '',
         Quantity: 1,
         Type: 1,
-        BuyerName: '',
+        ProductStatus: parseInt(formData.status) || 0,
         Address: sellerDetails.village || '',
-        SellerName: sellerDetails.name || '',
-        Price: parseFloat(formData.price) || 0, // Add Price field
+        CustomerName: sellerDetails.name || '',
+        MobileNumber: sellerDetails.phone || '',
+        Price: parseFloat(formData.price) || 0,
       };
 
-      // Post to API
+      console.log('Upload payload:', payload);
+
       const response = await axios.post(
         'https://fanfliks.onrender.com/api/Product/UploadDetailsAndMedia',
         payload,
