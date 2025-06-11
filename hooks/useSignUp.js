@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-const BASE_URL = 'https://fanfliks.onrender.com/api';
+const BASE_URL = 'https://trackinventory-xdex.onrender.com/api';
 
 const useSignUp = () => {
   const [loading, setLoading] = useState(false);
@@ -13,9 +13,9 @@ const useSignUp = () => {
 
     try {
       // Log payload for debugging
-      console.log('SignUp Payload:', payload);
+      // console.log('SignUp Payload:', payload);
 
-      const response = await axios.post(`https://fanfliks.onrender.com/api/User/SignUp`, payload, {
+      const response = await axios.post(`https://trackinventory-xdex.onrender.com/api/User/SignUp`, payload, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -23,7 +23,7 @@ const useSignUp = () => {
       });
 
       // Log response status and data for debugging
-      console.log('Response Status:', response.status, 'Body:', response.data);
+      // console.log('Response Status:', response.status, 'Body:', response.data);
 
       setLoading(false);
       return response.data;

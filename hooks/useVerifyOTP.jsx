@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'https://fanfliks.onrender.com/api';
+const BASE_URL = 'https://trackinventory-xdex.onrender.com/api';
 
 const useVerifyOTP = () => {
   const [loading, setLoading] = useState(false);
@@ -14,7 +14,7 @@ const useVerifyOTP = () => {
     try {
       console.log('Sending OTP Verification Request:', {
         url: `${BASE_URL}/OTP/VerifyOTP`,
-        payload,
+        // payload,
       });
 
       const response = await fetch(`${BASE_URL}/OTP/VerifyOTP`, {
@@ -32,14 +32,16 @@ const useVerifyOTP = () => {
       }
 
       // Store accessToken in SecureStore
-      if (responseData.accessToken) {
+      if (responseData.accessToken ) {
         await SecureStore.setItemAsync('accessToken', responseData.accessToken);
-        console.log('Access Token Stored in SecureStore');
+         
+        
+      
       } else {
         console.warn('No accessToken found in response:', responseData);
       }
 
-      console.log('OTP Verification Response:', responseData);
+      // console.log('OTP Verification Response:', responseData);
       setLoading(false);
       return responseData;
     } catch (err) {
@@ -80,7 +82,7 @@ const useVerifyOTP = () => {
         throw new Error(responseData.message || `Failed to resend OTP (Status: ${response.status})`);
       }
 
-      console.log('Resend OTP Response:', responseData);
+      // console.log('Resend OTP Response:', responseData);
       setLoading(false);
       return responseData;
     } catch (err) {

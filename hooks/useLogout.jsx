@@ -21,6 +21,7 @@ const useLogout = () => {
         'firstLogin',
         'userDetails',
         'businessDetails',
+        'serviceName'
       ];
 
       // Delete all known keys

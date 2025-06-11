@@ -6,10 +6,134 @@ import * as DocumentPicker from 'expo-document-picker';
 import { CameraView, Camera } from 'expo-camera';
 import useUploadPurchaseData from '../../hooks/useUploadPurchaseData';
 
+// Reusable Input Component
+const CustomInput = ({ label, value, onChangeText, placeholder, keyboardType, multiline, numberOfLines, accessibilityLabel, style }) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>{label}</Text>
+    <TextInput
+      style={[styles.input, multiline && styles.textArea, style]}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor="#888"
+      keyboardType={keyboardType}
+      multiline={multiline}
+      numberOfLines={numberOfLines}
+      accessibilityLabel={accessibilityLabel}
+    />
+  </View>
+);
+
+// Reusable Dropdown Component
+const CustomDropdown = ({ label, value, options, onSelect, placeholder }) => {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <View style={styles.inputContainer}>
+      <Text style={styles.label}>{label}</Text>
+      <TouchableOpacity
+        style={styles.dropdownContainer}
+        onPress={() => setVisible(true)}
+        accessibilityLabel={`Select ${label.toLowerCase()}`}
+        accessibilityRole="button"
+      >
+        <Text style={styles.dropdownText}>
+          {options.find((option) => option.value === value)?.label || placeholder}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color="#000" />
+      </TouchableOpacity>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setVisible(false)}
+          accessibilityLabel={`Close ${label.toLowerCase()} dropdown`}
+          accessibilityRole="button"
+        >
+          <View style={styles.dropdownModal}>
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={styles.dropdownOption}
+                onPress={() => {
+                  onSelect(option.value);
+                  setVisible(false);
+                }}
+                accessibilityLabel={option.label}
+                accessibilityRole="menuitem"
+              >
+                <Text style={styles.dropdownOptionText}>{option.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+};
+
+// Reusable Scan Input Component
+const ScanInput = ({ label, value, onChangeText, onScan, placeholder, accessibilityLabel }) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={styles.inputWithIcon}>
+      <TextInput
+        style={[styles.input, styles.inputWithIconInput]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor="#888"
+        accessibilityLabel={accessibilityLabel}
+      />
+      <TouchableOpacity
+        style={styles.scanIcon}
+        onPress={onScan}
+        accessibilityLabel={`Scan ${label.toLowerCase()}`}
+        accessibilityRole="button"
+      >
+        <Ionicons name="barcode-outline" size={24} color="#564dcc" />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+// Reusable Image/Document Preview Component
+const PreviewList = ({ items, onRemove, isImage = true }) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>{isImage ? 'Image Previews' : 'Document Previews'}</Text>
+    <FlatList
+      horizontal
+      data={items}
+      renderItem={({ item }) => (
+        <View style={styles.previewContainer}>
+          <Image
+            source={{ uri: item.uri }}
+            style={styles.previewImage}
+            onError={() => console.warn(`Failed to load ${isImage ? 'image' : 'document'}: ${item.name || item.id}`)}
+          />
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => onRemove(item.id)}
+            accessibilityLabel={`Remove ${isImage ? 'image' : 'document'}`}
+            accessibilityRole="button"
+          >
+            <Ionicons name="trash" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+      keyExtractor={(item) => item.id}
+      style={styles.previewList}
+      showsHorizontalScrollIndicator={false}
+    />
+  </View>
+);
+
 // Common Form Fields Component
 const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [statusDropdownVisible, setStatusDropdownVisible] = useState(false);
   const [scannerVisible, setScannerVisible] = useState(false);
   const [scannerField, setScannerField] = useState(null);
 
@@ -25,6 +149,16 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
     { label: 'Damaged', value: '2' },
     { label: 'Lost', value: '3' },
     { label: 'Stolen', value: '4' },
+  ];
+
+  const storageOptions = [
+    { label: 'Select Storage', value: '' },
+    { label: '32GB', value: '32GB' },
+    { label: '64GB', value: '64GB' },
+    { label: '128GB', value: '128GB' },
+    { label: '256GB', value: '256GB' },
+    { label: '512GB', value: '512GB' },
+    { label: '1TB', value: '1TB' },
   ];
 
   const handleImageUpload = async () => {
@@ -48,10 +182,6 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
       setImages([...images, ...newImages]);
       Alert.alert('Success', `${newImages.length} image(s) uploaded.`);
     }
-  };
-
-  const removeImage = (id) => {
-    setImages(images.filter((image) => image.id !== id));
   };
 
   const handleScan = async () => {
@@ -92,250 +222,110 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
 
   return (
     <>
-      <Text style={styles.label}>Item Name</Text>
-      <TextInput
-        style={styles.input}
+      <CustomInput
+        label="Item Name"
         value={formData.name}
         onChangeText={(text) => setFormData({ ...formData, name: text })}
         placeholder="Enter item name"
-        placeholderTextColor="#888"
         accessibilityLabel="Item name"
       />
-
-      <Text style={styles.label}>Serial/IMEI</Text>
-      <TouchableOpacity
-        style={styles.dropdownContainer}
-        onPress={() => setDropdownVisible(true)}
-        accessibilityLabel="Select serial or IMEI type"
-        accessibilityRole="button"
-      >
-        <Text style={styles.dropdownText}>
-          {dropdownOptions.find((option) => option.value === formData.serialType)?.label || 'Select Type'}
-        </Text>
-        <Ionicons name="chevron-down" size={20} color="#fff" />
-      </TouchableOpacity>
-
-      <Modal
-        visible={dropdownVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDropdownVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          onPress={() => setDropdownVisible(false)}
-          accessibilityLabel="Close dropdown"
-          accessibilityRole="button"
-        >
-          <View style={styles.dropdownModal}>
-            {dropdownOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={styles.dropdownOption}
-                onPress={() => {
-                  setFormData({ ...formData, serialType: option.value });
-                  setDropdownVisible(false);
-                }}
-                accessibilityLabel={option.label}
-                accessibilityRole="menuitem"
-              >
-                <Text style={styles.dropdownOptionText}>{option.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
+      <CustomDropdown
+        label="Storage"
+        value={formData.storage}
+        options={storageOptions}
+        onSelect={(value) => setFormData({ ...formData, storage: value })}
+        placeholder="Select Storage"
+      />
+      <CustomDropdown
+        label="Serial/IMEI"
+        value={formData.serialType}
+        options={dropdownOptions}
+        onSelect={(value) => setFormData({ ...formData, serialType: value })}
+        placeholder="Select Type"
+      />
       {formData.serialType === 'serial' && (
-        <>
-          <Text style={styles.label}>Serial Number</Text>
-          <View style={styles.inputWithIcon}>
-            <TextInput
-              style={[styles.input, styles.inputWithIconInput]}
-              value={formData.serialNumber}
-              onChangeText={(text) => setFormData({ ...formData, serialNumber: text })}
-              placeholder="Enter serial number"
-              placeholderTextColor="#888"
-              accessibilityLabel="Serial number"
-            />
-            <TouchableOpacity
-              style={styles.scanIcon}
-              onPress={() => {
-                setScannerField('serialNumber');
-                handleScan();
-              }}
-              accessibilityLabel="Scan serial number"
-              accessibilityRole="button"
-            >
-              <Ionicons name="barcode-outline" size={24} color="#564dcc" />
-            </TouchableOpacity>
-          </View>
-        </>
+        <ScanInput
+          label="Serial Number"
+          value={formData.serialNumber}
+          onChangeText={(text) => setFormData({ ...formData, serialNumber: text })}
+          onScan={() => {
+            setScannerField('serialNumber');
+            handleScan();
+          }}
+          placeholder="Enter serial number"
+          accessibilityLabel="Serial number"
+        />
       )}
-
       {formData.serialType === 'imei' && (
         <>
-          <Text style={styles.label}>IMEI Number 1</Text>
-          <View style={styles.inputWithIcon}>
-            <TextInput
-              style={[styles.input, styles.inputWithIconInput]}
-              value={formData.imei1}
-              onChangeText={(text) => setFormData({ ...formData, imei1: text })}
-              placeholder="Enter IMEI number 1"
-              placeholderTextColor="#888"
-              accessibilityLabel="IMEI number 1"
-            />
-            <TouchableOpacity
-              style={styles.scanIcon}
-              onPress={() => {
-                setScannerField('imei1');
-                handleScan();
-              }}
-              accessibilityLabel="Scan IMEI number 1"
-              accessibilityRole="button"
-            >
-              <Ionicons name="barcode-outline" size={24} color="#564dcc" />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.label}>IMEI Number 2</Text>
-          <View style={styles.inputWithIcon}>
-            <TextInput
-              style={[styles.input, styles.inputWithIconInput]}
-              value={formData.imei2}
-              onChangeText={(text) => setFormData({ ...formData, imei2: text })}
-              placeholder="Enter IMEI number 2"
-              placeholderTextColor="#888"
-              accessibilityLabel="IMEI number 2"
-            />
-            <TouchableOpacity
-              style={styles.scanIcon}
-              onPress={() => {
-                setScannerField('imei2');
-                handleScan();
-              }}
-              accessibilityLabel="Scan IMEI number 2"
-              accessibilityRole="button"
-            >
-              <Ionicons name="barcode-outline" size={24} color="#564dcc" />
-            </TouchableOpacity>
-          </View>
+          <ScanInput
+            label="IMEI Number 1"
+            value={formData.imei1}
+            onChangeText={(text) => setFormData({ ...formData, imei1: text })}
+            onScan={() => {
+              setScannerField('imei1');
+              handleScan();
+            }}
+            placeholder="Enter IMEI number 1"
+            accessibilityLabel="IMEI number 1"
+          />
+          <ScanInput
+            label="IMEI Number 2"
+            value={formData.imei2}
+            onChangeText={(text) => setFormData({ ...formData, imei2: text })}
+            onScan={() => {
+              setScannerField('imei2');
+              handleScan();
+            }}
+            placeholder="Enter IMEI number 2"
+            accessibilityLabel="IMEI number 2"
+          />
         </>
       )}
-
-      <Text style={styles.label}>Product Status</Text>
-      <TouchableOpacity
-        style={styles.dropdownContainer}
-        onPress={() => setStatusDropdownVisible(true)}
-        accessibilityLabel="Select product status"
-        accessibilityRole="button"
-      >
-        <Text style={styles.dropdownText}>
-          {statusOptions.find((option) => option.value === formData.status)?.label || 'Select Status'}
-        </Text>
-        <Ionicons name="chevron-down" size={20} color="#fff" />
-      </TouchableOpacity>
-
-      <Modal
-        visible={statusDropdownVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setStatusDropdownVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          onPress={() => setStatusDropdownVisible(false)}
-          accessibilityLabel="Close status dropdown"
-          accessibilityRole="button"
-        >
-          <View style={styles.dropdownModal}>
-            {statusOptions.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={styles.dropdownOption}
-                onPress={() => {
-                  setFormData({ ...formData, status: option.value });
-                  setStatusDropdownVisible(false);
-                }}
-                accessibilityLabel={option.label}
-                accessibilityRole="menuitem"
-              >
-                <Text style={styles.dropdownOptionText}>{option.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        style={[styles.input, styles.textArea]}
+      <CustomDropdown
+        label="Product Status"
+        value={formData.status}
+        options={statusOptions}
+        onSelect={(value) => setFormData({ ...formData, status: value })}
+        placeholder="Select Status"
+      />
+      <CustomInput
+        label="Description"
         value={formData.description}
         onChangeText={(text) => setFormData({ ...formData, description: text })}
         placeholder="Enter description"
-        placeholderTextColor="#888"
         multiline
         numberOfLines={4}
         accessibilityLabel="Description"
       />
-
-      <Text style={styles.label}>Battery Health (%)</Text>
-      <TextInput
-        style={styles.input}
+      <CustomInput
+        label="Battery Health (%)"
         value={formData.batteryHealth}
         onChangeText={(text) => setFormData({ ...formData, batteryHealth: text })}
         placeholder="Enter battery health"
-        placeholderTextColor="#888"
         keyboardType="numeric"
         accessibilityLabel="Battery health"
       />
-
-      <Text style={styles.label}>Price</Text>
-      <TextInput
-        style={styles.input}
+      <CustomInput
+        label="Price"
         value={formData.price}
         onChangeText={(text) => setFormData({ ...formData, price: text })}
         placeholder="Enter price"
-        placeholderTextColor="#888"
         keyboardType="numeric"
         accessibilityLabel="Price"
       />
-
-      <Text style={styles.label}>Images</Text>
-      <TouchableOpacity
-        style={styles.uploadButton}
-        onPress={handleImageUpload}
-        accessibilityLabel="Upload images"
-        accessibilityRole="button"
-      >
-        <Text style={styles.uploadButtonText}>Upload Images</Text>
-      </TouchableOpacity>
-
-      {images.length > 0 && (
-        <>
-          <Text style={styles.label}>Image Previews</Text>
-          <FlatList
-            horizontal
-            data={images}
-            renderItem={({ item }) => (
-              <View style={styles.previewContainer}>
-                <Image source={{ uri: item.uri }} style={styles.previewImage} />
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => removeImage(item.id)}
-                  accessibilityLabel="Remove image"
-                  accessibilityRole="button"
-                >
-                  <Ionicons name="trash" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            )}
-            keyExtractor={(item) => item.id}
-            style={styles.previewList}
-            showsHorizontalScrollIndicator={false}
-          />
-        </>
-      )}
-
+      <View style={styles.inputContainer}>
+        <Text style={styles.label}>Images</Text>
+        <TouchableOpacity
+          style={styles.uploadButton}
+          onPress={handleImageUpload}
+          accessibilityLabel="Upload images"
+          accessibilityRole="button"
+        >
+          <Text style={styles.uploadButtonText}>Upload Images</Text>
+        </TouchableOpacity>
+      </View>
+      {images.length > 0 && <PreviewList items={images} onRemove={(id) => setImages(images.filter((image) => image.id !== id))} />}
       {scannerVisible && (
         <Modal
           visible={scannerVisible}
@@ -348,15 +338,7 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
               facing="back"
               onBarcodeScanned={onBarcodeScanned}
               barcodeScannerSettings={{
-                barcodeTypes: [
-                  'qr',
-                  'code128',
-                  'code39',
-                  'ean13',
-                  'ean8',
-                  'upc_a',
-                  'upc_e',
-                ],
+                barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e'],
               }}
             />
             <TouchableOpacity
@@ -399,10 +381,6 @@ const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => 
     }
   };
 
-  const removeDocument = (id) => {
-    setDocuments(documents.filter((doc) => doc.id !== id));
-  };
-
   return (
     <>
       <TouchableOpacity
@@ -415,78 +393,47 @@ const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => 
           {showDetails ? `Hide ${type} Details` : `Add ${type} Details`}
         </Text>
       </TouchableOpacity>
-
       {showDetails && (
         <View style={styles.detailsContainer}>
-          <Text style={styles.label}>{type} Name</Text>
-          <TextInput
-            style={styles.input}
+          <CustomInput
+            label={`${type} Name`}
             value={details.name}
             onChangeText={(text) => setDetails({ ...details, name: text })}
             placeholder={`Enter ${type.toLowerCase()} name`}
-            placeholderTextColor="#888"
             accessibilityLabel={`${type} name`}
           />
-
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            style={styles.input}
+          <CustomInput
+            label="Phone Number"
             value={details.phone}
             onChangeText={(text) => setDetails({ ...details, phone: text })}
             placeholder="Enter phone number"
-            placeholderTextColor="#888"
             keyboardType="phone-pad"
             accessibilityLabel={`${type} phone number`}
           />
-
-          <Text style={styles.label}>Village</Text>
-          <TextInput
-            style={styles.input}
+          <CustomInput
+            label="Village"
             value={details.village}
             onChangeText={(text) => setDetails({ ...details, village: text })}
             placeholder="Enter village"
-            placeholderTextColor="#888"
             accessibilityLabel={`${type} village`}
           />
-
-          <Text style={styles.label}>Documents</Text>
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={handleDocumentUpload}
-            accessibilityLabel={`Upload ${type.toLowerCase()} documents`}
-            accessibilityRole="button"
-          >
-            <Text style={styles.uploadButtonText}>Upload Documents</Text>
-          </TouchableOpacity>
-
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Documents</Text>
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={handleDocumentUpload}
+              accessibilityLabel={`Upload ${type.toLowerCase()} documents`}
+              accessibilityRole="button"
+            >
+              <Text style={styles.uploadButtonText}>Upload Documents</Text>
+            </TouchableOpacity>
+          </View>
           {documents.length > 0 && (
-            <>
-              <Text style={styles.label}>Document Previews</Text>
-              <FlatList
-                horizontal
-                data={documents}
-                renderItem={({ item }) => (
-                  <View style={styles.previewContainer}>
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={styles.previewImage}
-                      onError={() => console.warn(`Failed to load document: ${item.name}`)}
-                    />
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => removeDocument(item.id)}
-                      accessibilityLabel="Remove document"
-                      accessibilityRole="button"
-                    >
-                      <Ionicons name="trash" size={20} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                keyExtractor={(item) => item.id}
-                style={styles.previewList}
-                showsHorizontalScrollIndicator={false}
-              />
-            </>
+            <PreviewList
+              items={documents}
+              onRemove={(id) => setDocuments(documents.filter((doc) => doc.id !== id))}
+              isImage={false}
+            />
           )}
         </View>
       )}
@@ -506,6 +453,7 @@ const PurchaseForm = ({ onSave, onCancel, initialData = {}, initialSellerDetails
     batteryHealth: '',
     price: '',
     status: '',
+    storage: '',
     ...initialData,
   });
   const [sellerDetails, setSellerDetails] = useState({
@@ -531,6 +479,7 @@ const PurchaseForm = ({ onSave, onCancel, initialData = {}, initialSellerDetails
         batteryHealth: '',
         price: '',
         status: '',
+        storage: '',
       });
       setSellerDetails({ name: '', phone: '', village: '' });
       setImages([]);
@@ -543,10 +492,16 @@ const PurchaseForm = ({ onSave, onCancel, initialData = {}, initialSellerDetails
   }, [success, error, onSave, productId]);
 
   const handleSave = async () => {
-    // Validation relaxed for updates: only check critical fields if creating new
     if (!productId) {
-      if (!formData.name || !formData.serialType || !formData.batteryHealth || !formData.price || formData.status === '') {
-        Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price, Product Status).');
+      if (
+        !formData.name ||
+        !formData.serialType ||
+        !formData.batteryHealth ||
+        !formData.price ||
+        formData.status === '' ||
+        !formData.storage
+      ) {
+        Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price, Product Status, Storage).');
         return;
       }
       if (formData.serialType === 'serial' && !formData.serialNumber) {
@@ -576,7 +531,7 @@ const PurchaseForm = ({ onSave, onCancel, initialData = {}, initialSellerDetails
   };
 
   return (
-    <ScrollView style={styles.formContainer}>
+    <ScrollView contentContainerStyle={{ marginBottom: 100 }} style={styles.formContainer}>
       <CommonFormFields formData={formData} setFormData={setFormData} images={images} setImages={setImages} />
       <DetailsForm
         type="Seller"
@@ -590,7 +545,7 @@ const PurchaseForm = ({ onSave, onCancel, initialData = {}, initialSellerDetails
           style={[styles.saveButton, isLoading && styles.disabledButton]}
           onPress={handleSave}
           disabled={isLoading}
-          accessibilityLabel={productId ? "Update purchase" : "Save purchase"}
+          accessibilityLabel={productId ? 'Update purchase' : 'Save purchase'}
           accessibilityRole="button"
         >
           <Text style={styles.buttonText}>{isLoading ? 'Saving...' : productId ? 'Update' : 'Save'}</Text>
@@ -604,6 +559,7 @@ const PurchaseForm = ({ onSave, onCancel, initialData = {}, initialSellerDetails
           <Text style={styles.buttonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
+      <View style={styles.bottomSpacer} />
     </ScrollView>
   );
 };
@@ -615,23 +571,28 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    marginBottom: 100,
+    backgroundColor: '#f5f5f5',
+  },
+  bottomSpacer: {
+    height: 150,
+  },
+  inputContainer: {
+    marginBottom: 12,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#333',
     marginBottom: 8,
-    marginTop: 12,
   },
   input: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#fff',
+    color: '#333',
     borderWidth: 1,
-    borderColor: '#3a3a3a',
+    borderColor: '#ddd',
   },
   inputWithIcon: {
     flexDirection: 'row',
@@ -646,17 +607,17 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     flexDirection: 'row',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#3a3a3a',
+    borderColor: '#ddd',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   dropdownText: {
     fontSize: 16,
-    color: '#fff',
+    color: '#333',
   },
   modalOverlay: {
     flex: 1,
@@ -665,7 +626,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dropdownModal: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#fff',
     borderRadius: 8,
     width: '80%',
     padding: 10,
@@ -673,11 +634,11 @@ const styles = StyleSheet.create({
   dropdownOption: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#3a3a3a',
+    borderBottomColor: '#ddd',
   },
   dropdownOptionText: {
     fontSize: 16,
-    color: '#fff',
+    color: '#333',
   },
   textArea: {
     height: 100,
@@ -706,7 +667,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#333',
+    backgroundColor: '#eee',
   },
   removeButton: {
     position: 'absolute',
@@ -717,22 +678,24 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   addButton: {
-    backgroundColor: '#3a3a3a',
+    backgroundColor: '#e0e0e0',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
     marginVertical: 10,
   },
   addButtonText: {
-    color: '#fff',
+    color: '#333',
     fontSize: 16,
     fontWeight: '600',
   },
   detailsContainer: {
     padding: 10,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#fff',
     borderRadius: 8,
     marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -748,7 +711,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   disabledButton: {
-    backgroundColor: '#3a3a3a',
+    backgroundColor: '#ccc',
     opacity: 0.7,
   },
   cancelButton: {

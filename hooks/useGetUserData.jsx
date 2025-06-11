@@ -20,7 +20,7 @@ const useGetUserData = () => {
       }
 
       const response = await axios.get(
-        'https://fanfliks.onrender.com/api/User/GetUserDetails',
+        'https://trackinventory-xdex.onrender.com/api/User/GetUserDetails',
         {
           headers: {
             'Content-Type': 'application/json',
@@ -29,11 +29,11 @@ const useGetUserData = () => {
         }
       );
 
-      console.log('User Data Response:', JSON.stringify(response.data, null, 2)); // Debug log
+      // console.log('User Data Response:', JSON.stringify(response.data, null, 2)); // Debug log
 
       if (response.status === 200) {
         setData(response.data);
-        console.log(response.data)
+        // console.log(response.data)
         setSuccess(true);
       } else {
         throw new Error(`Unexpected response status: ${response.status}`);

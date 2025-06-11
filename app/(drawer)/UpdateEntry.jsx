@@ -54,7 +54,7 @@ const UpdateEntry = () => {
         }
 
         const response = await axios.get(
-          `https://fanfliks.onrender.com/api/Product/GetProductById?id=${id}`,
+          `https://trackinventory-xdex.onrender.com/api/Product/GetProductById?id=${id}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -138,10 +138,10 @@ const UpdateEntry = () => {
       <ErrorBoundary>
         <View style={styles.header}>
           <TouchableOpacity accessibilityLabel="Open menu" accessibilityRole="button">
-            <Ionicons name="menu" size={28} color="#fff" onPress={() => Nav.openDrawer()} />
+            <Ionicons name="menu" size={28} color="#000" onPress={() => Nav.openDrawer()} />
           </TouchableOpacity>
           <TouchableOpacity accessibilityLabel="Back" accessibilityRole="button">
-            <Ionicons name="arrow-back" size={28} color="#fff" onPress={() => Nav.goBack()} />
+            <Ionicons name="arrow-back" size={28} color="#000" onPress={() => Nav.goBack()} />
           </TouchableOpacity>
         </View>
 
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   safeArea: {
     paddingTop: 38,
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -217,15 +217,18 @@ const styles = StyleSheet.create({
   },
   subtitleText: {
     fontSize: 14,
-    color: '#fff',
+    color: '#000',
     marginTop: 6,
   },
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginVertical: 10,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#fff',
     borderRadius: 8,
+     borderWidth:1,
+    borderColor:"#aaa",
+    
     overflow: 'hidden',
   },
   tab: {

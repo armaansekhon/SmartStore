@@ -1,26 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const useFetchSales = (days) => {
+const useFetchVehicleSales = (days) => {
   const [sales, setSales] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [error, setError] = useState(null);
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const take = 10;
-
-  const statusToWarranty = (productStatus) => {
-    switch (parseInt(productStatus)) {
-      case 0: return 'Warranty';
-      case 1: return 'Out of Warranty';
-      case 2: return 'Damaged';
-      case 3: return 'Lost';
-      case 4: return 'Stolen';
-      default: return 'Unknown';
-    }
-  };
+  const take = 100;
 
   const fetchSales = useCallback(async (reset = false) => {
     if (isLoading || (!hasMore && !reset)) return;
@@ -37,39 +26,45 @@ const useFetchSales = (days) => {
 
       const currentSkip = reset ? 0 : skip;
 
-      const requestBody = {
-        Type: '0', // Sales products
-        Skip: currentSkip,
-        Take: take,
+      const params = {
+        skip: currentSkip,
+        take,
+        type: 0, // Vehicle sales
       };
-
       if (days !== null) {
-        requestBody.Days = days;
+        params.days = days;
       }
 
-      // console.log('API request body:', requestBody);
-
-      const response = await axios.post(
-        'https://trackinventory-xdex.onrender.com/api/Product/GetAllProducts',
-        requestBody,
+      const response = await axios.get(
+        'https://trackinventory-xdex.onrender.com/api/Vehicle/GetAllVehicles',
         {
+          params,
           headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
           },
         }
       );
 
-      const newData = Array.isArray(response.data?.products) ? response.data.products : [];
+      const newData = Array.isArray(response.data?.vehicles) ? response.data.vehicles : [];
       const totalCount = response.data?.totalCount || 0;
 
       const mappedData = newData.map(item => ({
         ...item,
-        warranty: statusToWarranty(item.productStatus),
+        warranty: (() => {
+          switch (parseInt(item.vehicleStatus)) {
+            case 0: return 'Warranty';
+            case 1: return 'Out of Warranty';
+            case 2: return 'Damaged';
+            case 3: return 'Lost';
+            case 4: return 'Stolen';
+            default: return 'Unknown';
+          }
+        })(),
       }));
 
+      // console.log('API query params:', params);
       // console.log('API response.data:', response.data);
-      // console.log('Mapped data:', mappedData);
+      // console.log('Mapped data is:', mappedData);
 
       setSales((prev) => (reset ? mappedData : [...prev, ...mappedData]));
       setSkip(currentSkip + take);
@@ -78,7 +73,7 @@ const useFetchSales = (days) => {
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
-        'Failed to fetch sales.';
+        'Failed to fetch vehicle sales.';
       setError(errorMessage);
       setSales([]);
     } finally {
@@ -105,4 +100,4 @@ const useFetchSales = (days) => {
   return { sales, isLoading, isInitialLoading, error, loadMore, refresh };
 };
 
-export default useFetchSales;
+export default useFetchVehicleSales;

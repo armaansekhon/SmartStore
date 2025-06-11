@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const BASE_URL = 'https://fanfliks.onrender.com/api';
+const BASE_URL = 'https://trackinventory-xdex.onrender.com/api';
 
 const useForgotPassword = () => {
   const [loading, setLoading] = useState(false);
@@ -17,11 +17,11 @@ const useForgotPassword = () => {
         Type: '1',
       };
 
-      console.log('Sending Forgot Password Request:', {
-        url: `${BASE_URL}/User/ForgotPassword`,
-        method: 'POST',
-        payload,
-      });
+      // console.log('Sending Forgot Password Request:', {
+      //   url: `${BASE_URL}/User/ForgotPassword`,
+      //   method: 'POST',
+      //   payload,
+      // });
 
       const response = await fetch(`${BASE_URL}/User/ForgotPassword`, {
         method: 'POST',

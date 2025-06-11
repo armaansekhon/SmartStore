@@ -6,8 +6,6 @@ import * as DocumentPicker from 'expo-document-picker';
 import { CameraView, Camera } from 'expo-camera';
 import useUploadSaleData from './useUploadSaleData';
 
-
-
 // Reusable Input Component
 const CustomInput = ({ label, value, onChangeText, placeholder, keyboardType, multiline, numberOfLines, accessibilityLabel, style }) => (
   <View style={styles.inputContainer}>
@@ -463,9 +461,8 @@ const SaleForm = ({ onSave, onCancel }) => {
   const { uploadData, isLoading, error, success } = useUploadSaleData();
 
   const handleSelectInventory = () => {
-    
     // Placeholder for inventory selection logic
-    // Alert.alert('Inventory Selection', 'This feature is not yet implemented.');
+    Alert.alert('Inventory Selection', 'This feature is not yet implemented.');
   };
 
   const handleSave = async () => {
@@ -526,7 +523,7 @@ const SaleForm = ({ onSave, onCancel }) => {
       <TouchableOpacity
         style={styles.inventoryButton}
         onPress={handleSelectInventory}
-        accessibilityLabel="Select from inventory"
+        accessibilityLabel="Select form inventory"
         accessibilityRole="button"
       >
         <Text style={styles.inventoryButtonText}>Select Form Inventory</Text>

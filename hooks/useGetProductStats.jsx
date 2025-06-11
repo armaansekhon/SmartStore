@@ -20,7 +20,7 @@ const useGetProductStats = () => {
       }
 
       const response = await axios.get(
-        'https://fanfliks.onrender.com/api/Product/GetProductStats',
+        'https://trackinventory-xdex.onrender.com/api/Product/GetProductStats',
         {
           headers: {
             'Content-Type': 'application/json',
@@ -29,7 +29,7 @@ const useGetProductStats = () => {
         }
       );
 
-      console.log('Product Stats Response:', JSON.stringify(response.data, null, 2)); // Debug log
+      // console.log('Product Stats Response:', JSON.stringify(response.data, null, 2)); // Debug log
 
       if (response.status === 200) {
         setData(response.data);

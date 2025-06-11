@@ -32,7 +32,8 @@ const useUploadSaleData = () => {
         Address: buyerDetails.village || '',
         SellerName: '',
         Price: parseFloat(formData.price) || 0,
-        ProductStatus: parseInt(formData.status) || 0, // Changed from status to productStatus
+        ProductStatus: parseInt(formData.productStatus) || 0, // Corrected to use productStatus
+        Storage: formData.storage || '', // Added Storage field
         Images: images.map(img => ({ uri: img.uri })) || [],
         Documents: documents.map(doc => ({ uri: doc.uri, name: doc.name })) || [],
       };
@@ -40,7 +41,7 @@ const useUploadSaleData = () => {
       console.log('Upload Payload:', JSON.stringify(payload, null, 2)); // Debug log
 
       const response = await axios.post(
-        'https://fanfliks.onrender.com/api/Product/UploadDetailsAndMedia',
+        'https://trackinventory-xdex.onrender.com/api/Product/UploadDetailsAndMedia',
         payload,
         {
           headers: {

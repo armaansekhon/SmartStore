@@ -1,12 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, Image, ScrollView, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { CameraView, Camera } from 'expo-camera';
-import useUploadSaleData from './useUploadSaleData';
+import useUploadVehiclePurchaseData from '../../hooks/useUploadVehicleData';
 
+// Validate DD/MM/YYYY date format
+const isValidDate = (dateStr) => {
+  if (!dateStr) return true; // Allow empty dates
+  const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+  if (!regex.test(dateStr)) return false;
 
+  const [day, month, year] = dateStr.split('/').map(Number);
+  if (month < 1 || month > 12) return false;
+  if (year < 1900 || year > 9999) return false;
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  return day >= 1 && day <= daysInMonth;
+};
 
 // Reusable Input Component
 const CustomInput = ({ label, value, onChangeText, placeholder, keyboardType, multiline, numberOfLines, accessibilityLabel, style }) => (
@@ -134,16 +146,10 @@ const PreviewList = ({ items, onRemove, isImage = true }) => (
   </View>
 );
 
-// Common Form Fields Component
-const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
+// Common Vehicle Form Fields Component
+const CommonVehicleFormFields = ({ formData, setFormData, images, setImages }) => {
   const [scannerVisible, setScannerVisible] = useState(false);
   const [scannerField, setScannerField] = useState(null);
-
-  const dropdownOptions = [
-    { label: 'Select Type', value: '' },
-    { label: 'Serial Number', value: 'serial' },
-    { label: 'IMEI Number', value: 'imei' },
-  ];
 
   const statusOptions = [
     { label: 'Warranty', value: '0' },
@@ -151,16 +157,6 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
     { label: 'Damaged', value: '2' },
     { label: 'Lost', value: '3' },
     { label: 'Stolen', value: '4' },
-  ];
-
-  const storageOptions = [
-    { label: 'Select Storage', value: '' },
-    { label: '32GB', value: '32GB' },
-    { label: '64GB', value: '64GB' },
-    { label: '128GB', value: '128GB' },
-    { label: '256GB', value: '256GB' },
-    { label: '512GB', value: '512GB' },
-    { label: '1TB', value: '1TB' },
   ];
 
   const handleImageUpload = async () => {
@@ -186,12 +182,13 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
     }
   };
 
-  const handleScan = async () => {
+  const handleScan = async (field) => {
     const { status } = await Camera.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Denied', 'Please grant camera access to scan QR codes or barcodes.');
       return;
     }
+    setScannerField(field);
     setScannerVisible(true);
   };
 
@@ -202,94 +199,97 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
       return;
     }
 
-    if (formData.serialType === 'serial' && scannerField === 'serialNumber') {
-      setFormData({ ...formData, serialNumber: data });
-    } else if (formData.serialType === 'imei') {
-      if (scannerField === 'imei1') {
-        setFormData({ ...formData, imei1: data });
-      } else if (scannerField === 'imei2') {
-        setFormData({ ...formData, imei2: data });
-      } else {
-        const imeiParts = data.split(',').map((part) => part.trim());
-        if (imeiParts.length === 2) {
-          setFormData({ ...formData, imei1: imeiParts[0], imei2: imeiParts[1] });
-        } else {
-          setFormData({ ...formData, imei1: data });
-        }
-      }
-    } else {
-      Alert.alert('Error', 'Please select Serial Number or IMEI Number first.');
+    if (scannerField === 'engineNumber') {
+      setFormData({ ...formData, engineNumber: data });
+    } else if (scannerField === 'chassisNumber') {
+      setFormData({ ...formData, chassisNumber: data });
     }
   };
 
   return (
     <>
       <CustomInput
-        label="Item Name"
-        value={formData.name}
-        onChangeText={(text) => setFormData({ ...formData, name: text })}
-        placeholder="Enter item name"
-        accessibilityLabel="Item name"
+        label="Vehicle Name"
+        value={formData.vehicleName}
+        onChangeText={(text) => setFormData({ ...formData, vehicleName: text })}
+        placeholder="Enter vehicle name"
+        accessibilityLabel="Vehicle name"
+      />
+      <CustomInput
+        label="Model (Month and Year)"
+        value={formData.model}
+        onChangeText={(text) => setFormData({ ...formData, model: text })}
+        placeholder="e.g., January 2023"
+        accessibilityLabel="Vehicle model"
+      />
+      <CustomInput
+        label="Color"
+        value={formData.color}
+        onChangeText={(text) => setFormData({ ...formData, color: text })}
+        placeholder="Enter vehicle color"
+        accessibilityLabel="Vehicle color"
+      />
+      <CustomInput
+        label="Owner"
+        value={formData.owner}
+        onChangeText={(text) => setFormData({ ...formData, owner: text })}
+        placeholder="Enter owner name"
+        accessibilityLabel="Owner name"
+      />
+      <ScanInput
+        label="Engine Number"
+        value={formData.engineNumber}
+        onChangeText={(text) => setFormData({ ...formData, engineNumber: text })}
+        onScan={() => handleScan('engineNumber')}
+        placeholder="Enter engine number"
+        accessibilityLabel="Engine number"
+      />
+      <ScanInput
+        label="Chassis Number"
+        value={formData.chassisNumber}
+        onChangeText={(text) => setFormData({ ...formData, chassisNumber: text })}
+        onScan={() => handleScan('chassisNumber')}
+        placeholder="Enter chassis number"
+        accessibilityLabel="Chassis number"
       />
       <CustomDropdown
-        label="Storage"
-        value={formData.storage}
-        options={storageOptions}
-        onSelect={(value) => setFormData({ ...formData, storage: value })}
-        placeholder="Select Storage"
-      />
-      <CustomDropdown
-        label="Serial/IMEI"
-        value={formData.serialType}
-        options={dropdownOptions}
-        onSelect={(value) => setFormData({ ...formData, serialType: value })}
-        placeholder="Select Type"
-      />
-      {formData.serialType === 'serial' && (
-        <ScanInput
-          label="Serial Number"
-          value={formData.serialNumber}
-          onChangeText={(text) => setFormData({ ...formData, serialNumber: text })}
-          onScan={() => {
-            setScannerField('serialNumber');
-            handleScan();
-          }}
-          placeholder="Enter serial number"
-          accessibilityLabel="Serial number"
-        />
-      )}
-      {formData.serialType === 'imei' && (
-        <>
-          <ScanInput
-            label="IMEI Number 1"
-            value={formData.imei1}
-            onChangeText={(text) => setFormData({ ...formData, imei1: text })}
-            onScan={() => {
-              setScannerField('imei1');
-              handleScan();
-            }}
-            placeholder="Enter IMEI number 1"
-            accessibilityLabel="IMEI number 1"
-          />
-          <ScanInput
-            label="IMEI Number 2"
-            value={formData.imei2}
-            onChangeText={(text) => setFormData({ ...formData, imei2: text })}
-            onScan={() => {
-              setScannerField('imei2');
-              handleScan();
-            }}
-            placeholder="Enter IMEI number 2"
-            accessibilityLabel="IMEI number 2"
-          />
-        </>
-      )}
-      <CustomDropdown
-        label="Product Status"
-        value={formData.productStatus}
+        label="Vehicle Status"
+        value={formData.status}
         options={statusOptions}
-        onSelect={(value) => setFormData({ ...formData, productStatus: value })}
+        onSelect={(value) => setFormData({ ...formData, status: value })}
         placeholder="Select Status"
+      />
+      <CustomInput
+        label="Insurance Valid Date"
+        value={formData.insuranceValidDate}
+        onChangeText={(text) => setFormData({ ...formData, insuranceValidDate: text })}
+        placeholder="DD/MM/YYYY"
+        accessibilityLabel="Insurance valid date"
+      />
+      <CustomInput
+        label="Tyre Condition (%)"
+        value={formData.tyreCondition}
+        onChangeText={(text) => setFormData({ ...formData, tyreCondition: text })}
+        placeholder="Enter tyre condition percentage"
+        keyboardType="numeric"
+        accessibilityLabel="Tyre condition"
+      />
+      <CustomInput
+        label="Number of Keys"
+        value={formData.numberOfKeys}
+        onChangeText={(text) => setFormData({ ...formData, numberOfKeys: text })}
+        placeholder="Enter number of keys"
+        keyboardType="numeric"
+        accessibilityLabel="Number of keys"
+      />
+      <CustomInput
+        label="Condition or Fault"
+        value={formData.condition}
+        onChangeText={(text) => setFormData({ ...formData, condition: text })}
+        placeholder="Enter condition or any faults"
+        multiline
+        numberOfLines={4}
+        accessibilityLabel="Condition or fault"
       />
       <CustomInput
         label="Description"
@@ -301,12 +301,11 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
         accessibilityLabel="Description"
       />
       <CustomInput
-        label="Battery Health (%)"
-        value={formData.batteryHealth}
-        onChangeText={(text) => setFormData({ ...formData, batteryHealth: text })}
-        placeholder="Enter battery health"
-        keyboardType="numeric"
-        accessibilityLabel="Battery health"
+        label="Permit Expiry Date"
+        value={formData.permitExpiryDate}
+        onChangeText={(text) => setFormData({ ...formData, permitExpiryDate: text })}
+        placeholder="DD/MM/YYYY"
+        accessibilityLabel="Permit expiry date"
       />
       <CustomInput
         label="Price"
@@ -358,7 +357,7 @@ const CommonFormFields = ({ formData, setFormData, images, setImages }) => {
   );
 };
 
-// Buyer Details Component
+// Seller Details Component
 const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => {
   const [showDetails, setShowDetails] = useState(false);
 
@@ -443,99 +442,109 @@ const DetailsForm = ({ type, details, setDetails, documents, setDocuments }) => 
   );
 };
 
-// Sale Form Component
-const SaleForm = ({ onSave, onCancel }) => {
+// Vehicle Purchase Form Component
+const PurVehicleForm = ({ onSave, onCancel, initialData = {}, initialSellerDetails = {}, vehicleId }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    serialType: '',
-    serialNumber: '',
-    imei1: '',
-    imei2: '',
+    vehicleName: '',
+    model: '',
+    color: '',
+    owner: '',
+    engineNumber: '',
+    chassisNumber: '',
+    status: '',
+    insuranceValidDate: '',
+    tyreCondition: '',
+    numberOfKeys: '',
+    condition: '',
     description: '',
-    batteryHealth: '',
+    permitExpiryDate: '',
     price: '',
-    productStatus: '',
-    storage: '',
+    ...initialData,
   });
-  const [buyerDetails, setBuyerDetails] = useState({ name: '', phone: '', village: '' });
+  const [sellerDetails, setSellerDetails] = useState({
+    name: '',
+    phone: '',
+    village: '',
+    ...initialSellerDetails,
+  });
   const [images, setImages] = useState([]);
   const [documents, setDocuments] = useState([]);
-  const { uploadData, isLoading, error, success } = useUploadSaleData();
+  const { uploadData, isLoading, error, success } = useUploadVehiclePurchaseData();
 
-  const handleSelectInventory = () => {
-    
-    // Placeholder for inventory selection logic
-    // Alert.alert('Inventory Selection', 'This feature is not yet implemented.');
-  };
+  useEffect(() => {
+    if (success) {
+      Alert.alert('Success', vehicleId ? 'Vehicle purchase updated successfully.' : 'Vehicle purchase data uploaded successfully.');
+      setFormData({
+        vehicleName: '',
+        model: '',
+        color: '',
+        owner: '',
+        engineNumber: '',
+        chassisNumber: '',
+        status: '',
+        insuranceValidDate: '',
+        tyreCondition: '',
+        numberOfKeys: '',
+        condition: '',
+        description: '',
+        permitExpiryDate: '',
+        price: '',
+      });
+      setSellerDetails({ name: '', phone: '', village: '' });
+      setImages([]);
+      setDocuments([]);
+      onSave();
+    }
+    if (error) {
+      Alert.alert('Error', error);
+    }
+  }, [success, error, onSave, vehicleId]);
 
   const handleSave = async () => {
-    if (
-      !formData.name ||
-      !formData.serialType ||
-      !formData.batteryHealth ||
-      !formData.price ||
-      formData.productStatus === '' ||
-      !formData.storage
-    ) {
-      Alert.alert('Error', 'Please fill all required fields (Name, Serial/IMEI, Battery Health, Price, Product Status, Storage).');
-      return;
-    }
-    if (formData.serialType === 'serial' && !formData.serialNumber) {
-      Alert.alert('Error', 'Please enter a serial number.');
-      return;
-    }
-    if (formData.serialType === 'imei' && (!formData.imei1 || !formData.imei2)) {
-      Alert.alert('Error', 'Please enter both IMEI numbers.');
-      return;
-    }
-    if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+    if (formData.price && (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0)) {
       Alert.alert('Error', 'Please enter a valid price greater than 0.');
       return;
     }
-    if (isNaN(parseInt(formData.productStatus)) || parseInt(formData.productStatus) < 0 || parseInt(formData.productStatus) > 4) {
-      Alert.alert('Error', 'Please select a valid product status.');
+
+    if (formData.tyreCondition && (isNaN(parseFloat(formData.tyreCondition)) || parseFloat(formData.tyreCondition) < 0 || parseFloat(formData.tyreCondition) > 100)) {
+      Alert.alert('Error', 'Please enter a valid tyre condition percentage (0-100).');
+      return;
+    }
+
+    if (formData.numberOfKeys && (isNaN(parseInt(formData.numberOfKeys)) || parseInt(formData.numberOfKeys) < 0)) {
+      Alert.alert('Error', 'Please enter a valid number of keys (0 or more).');
+      return;
+    }
+
+    if (formData.status && (isNaN(parseInt(formData.status)) || parseInt(formData.status) < 0 || parseInt(formData.status) > 4)) {
+      Alert.alert('Error', 'Please select a valid vehicle status.');
+      return;
+    }
+
+    if (formData.insuranceValidDate && !isValidDate(formData.insuranceValidDate)) {
+      Alert.alert('Error', 'Please enter a valid Insurance Valid Date in DD/MM/YYYY format.');
+      return;
+    }
+
+    if (formData.permitExpiryDate && !isValidDate(formData.permitExpiryDate)) {
+      Alert.alert('Error', 'Please enter a valid Permit Expiry Date in DD/MM/YYYY format.');
       return;
     }
 
     try {
-      await uploadData(formData, buyerDetails, images, documents);
-      Alert.alert('Success', 'Sale data uploaded successfully.');
-      setFormData({
-        name: '',
-        serialType: '',
-        serialNumber: '',
-        imei1: '',
-        imei2: '',
-        description: '',
-        batteryHealth: '',
-        price: '',
-        productStatus: '',
-        storage: '',
-      });
-      setBuyerDetails({ name: '', phone: '', village: '' });
-      setImages([]);
-      setDocuments([]);
-      onSave();
+      await uploadData(formData, sellerDetails, images, documents, vehicleId || '-1');
     } catch (err) {
-      Alert.alert('Error', error || 'Failed to upload sale data.');
+      // Error handled in useEffect
     }
   };
 
   return (
     <ScrollView contentContainerStyle={{ marginBottom: 100 }} style={styles.formContainer}>
-      <TouchableOpacity
-        style={styles.inventoryButton}
-        onPress={handleSelectInventory}
-        accessibilityLabel="Select from inventory"
-        accessibilityRole="button"
-      >
-        <Text style={styles.inventoryButtonText}>Select Form Inventory</Text>
-      </TouchableOpacity>
-      <CommonFormFields formData={formData} setFormData={setFormData} images={images} setImages={setImages} />
+      <CommonVehicleFormFields formData={formData} setFormData={setFormData} images={images} setImages={setImages} />
       <DetailsForm
-        type="Buyer"
-        details={buyerDetails}
-        setDetails={setBuyerDetails}
+        type="Seller"
+        details={sellerDetails}
+        setDetails={setSellerDetails}
         documents={documents}
         setDocuments={setDocuments}
       />
@@ -544,15 +553,15 @@ const SaleForm = ({ onSave, onCancel }) => {
           style={[styles.saveButton, isLoading && styles.disabledButton]}
           onPress={handleSave}
           disabled={isLoading}
-          accessibilityLabel="Save sale"
+          accessibilityLabel={vehicleId ? 'Update vehicle purchase' : 'Save vehicle purchase'}
           accessibilityRole="button"
         >
-          <Text style={styles.buttonText}>{isLoading ? 'Saving...' : 'Save'}</Text>
+          <Text style={styles.buttonText}>{isLoading ? 'Saving...' : vehicleId ? 'Update' : 'Save'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={onCancel}
-          accessibilityLabel="Cancel sale"
+          accessibilityLabel="Cancel vehicle purchase"
           accessibilityRole="button"
         >
           <Text style={styles.buttonText}>Cancel</Text>
@@ -563,7 +572,7 @@ const SaleForm = ({ onSave, onCancel }) => {
   );
 };
 
-export default SaleForm;
+export default PurVehicleForm;
 
 const styles = StyleSheet.create({
   formContainer: {
@@ -574,18 +583,6 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 150,
-  },
-  inventoryButton: {
-    backgroundColor: '#059669',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  inventoryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   inputContainer: {
     marginBottom: 12,

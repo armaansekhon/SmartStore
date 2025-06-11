@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 30,
     fontSize: 16,
-    color: '#000',
+    color: '#fff',
   },
 });
 

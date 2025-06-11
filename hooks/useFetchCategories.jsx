@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'https://fanfliks.onrender.com/api';
+const BASE_URL = 'https://trackinventory-xdex.onrender.com/api';
 
 const useFetchCategories = () => {
   const [categories, setCategories] = useState([]);

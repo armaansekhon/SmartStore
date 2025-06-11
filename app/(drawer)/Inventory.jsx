@@ -1,187 +1,341 @@
-
-import React, { useState, useCallback, Component } from 'react';
-import { StyleSheet, Text, View, Image, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { StyleSheet, Text, View, Image, FlatList, ActivityIndicator, TouchableOpacity,TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
-import { useNavigation } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 
-// Error Boundary Component
-class ErrorBoundary extends Component {
-  state = { hasError: false };
+// Mock hooks (replace with actual implementations)
+const useFetchInventory = () => ({
+  items: [], // Placeholder for mobile inventory
+  isLoading: false,
+  isInitialLoading: false,
+  error: null,
+  loadMore: () => {},
+  refresh: () => {},
+});
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+const useFetchVehicleInventory = () => ({
+  items: [], // Placeholder for vehicle inventory
+  isLoading: false,
+  isInitialLoading: false,
+  error: null,
+  loadMore: () => {},
+  refresh: () => {},
+});
+
+// Service Configuration
+const servicesConfig = {
+  Mobile: {
+    hook: useFetchInventory,
+    title: 'Inventory',
+    subtitle: 'Here is the list of items in inventory',
+    fields: [
+      { key: 'batteryHealth', label: 'Battery Health', type: 'battery', unit: '%' },
+    ],
+    statusKey: 'vehicleStatus',
+  },
+  Vehicle: {
+    hook: useFetchVehicleInventory,
+    title: 'Vehicle Inventory',
+    subtitle: 'Here is the list of vehicles in inventory',
+    fields: [
+      { key: 'tyrePercentage', label: 'Tyre Percentage', type: 'tyre', unit: '%' },
+      { key: 'noOfKeys', label: 'Number of Keys', type: 'text' },
+      { key: 'model', label: 'Model', type: 'text', icon: 'car' },
+    ],
+    statusKey: 'vehicleStatus',
+  },
+};
+
+// Utility function for warranty status
+const statusToWarranty = (item, statusKey) => {
+  const statusValue = parseInt(item[statusKey]);
+  switch (statusValue) {
+    case 0: return 'Warranty';
+    case 1: return 'Out of Warranty';
+    case 2: return 'Damaged';
+    case 3: return 'Lost';
+    case 4: return 'Stolen';
+    default: return 'Unknown';
   }
+};
 
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Something went wrong. Please try again.</Text>
-        </View>
-      );
-    }
-    return this.props.children;
-  }
-}
+// Reusable Header Component
+const Header = ({ onMenuPress, onAddPress }) => (
+  <View style={styles.header}>
+    <TouchableOpacity
+      onPress={onMenuPress}
+      accessibilityLabel="Open menu"
+      accessibilityRole="button"
+    >
+      <Ionicons name="menu" size={28} color="#333333" />
+    </TouchableOpacity>
+    <TouchableOpacity
+      onPress={onAddPress}
+      accessibilityLabel="Add new item"
+      accessibilityRole="button"
+    >
+      <Ionicons name="add" size={28} color="#333333" />
+    </TouchableOpacity>
+  </View>
+);
 
-const Inventory = () => {
-  const Nav =useNavigation()
-  // Sample data for the list
-  const [inventoryData] = useState([
-    { id: '1', name: 'iPhone 13 Pro Max', description: 'Phone is in excellent condition', batteryHealth: '100%', price: '₹54,677', warranty: 'IN WARRANTY' },
-    { id: '2', name: 'iPhone 12 Pro', description: 'Phone is in good condition', batteryHealth: '85%', price: '₹45,000', warranty: 'OUT OF WARRANTY' },
-    { id: '3', name: 'iPhone 14', description: 'Like new, barely used', batteryHealth: '95%', price: '₹60,000', warranty: 'IN WARRANTY' },
-    { id: '4', name: 'iPhone 11', description: 'Phone is in excellent condition', batteryHealth: '80%', price: '₹35,000', warranty: 'OUT OF WARRANTY' },
-    { id: '5', name: 'iPhone 13', description: 'Minor scratches', batteryHealth: '90%', price: '₹50,000', warranty: 'OUT OF WARRANTY' },
-    { id: '6', name: 'iPhone 13 Pro Max', description: 'Phone is in excellent condition', batteryHealth: '98%', price: '₹55,000', warranty: 'IN WARRANTY' },
-    { id: '7', name: 'iPhone 12', description: 'Good condition', batteryHealth: '87%', price: '₹40,000', warranty: 'OUT OF WARRANTY' },
-    { id: '8', name: 'iPhone 14 Pro', description: 'Excellent condition', batteryHealth: '99%', price: '₹65,000', warranty: 'IN WARRANTY' },
-  ]);
+// Reusable Title Section Component
+const TitleSection = ({ title, subtitle }) => (
+  <View style={styles.titleContainer}>
+    <View style={styles.titleTextContainer}>
+      <Text style={styles.titleText}>{title}</Text>
+      <Text style={styles.subtitleText}>{subtitle}</Text>
+    </View>
+    <View style={styles.animationContainer}>
+      <LottieView
+        source={require('../../assets/lottie/inventory.json')}
+        autoPlay
+        loop
+        speed={0.7}
+        style={styles.lottieAnimation}
+        onError={console.error}
+      />
+    </View>
+  </View>
+);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoadingImages, setIsLoadingImages] = useState({});
+// Reusable Search Input Component (from Purchase.js)
+const CustomSearchInput = ({ value, onChangeText, placeholder, accessibilityLabel }) => (
+  <View style={styles.searchContainer}>
+    <Ionicons name="search" size={20} color="#564DCC" style={styles.searchIcon} />
+    <TextInput
+      style={styles.searchInput}
+      placeholder={placeholder}
+      placeholderTextColor="#666666"
+      value={value}
+      onChangeText={onChangeText}
+      accessibilityLabel={accessibilityLabel}
+      returnKeyType="search"
+    />
+  </View>
+);
 
-  // Filter data based on search query
-  const filteredData = inventoryData.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+// Reusable Inventory Item Component (adapted from PurchaseItem)
+const InventoryItem = React.memo(({ item, serviceConfig, isLoadingImages, setIsLoadingImages }) => {
+  const warranty = statusToWarranty(item, serviceConfig.statusKey);
 
-  const renderItem = useCallback(({ item }) => {
-    const batteryHealthValue = parseInt(item.batteryHealth) || 0; // Parse to number, fallback to 0
-    const batteryIcon = batteryHealthValue >= 90 ? 'battery-full' : batteryHealthValue >= 80 ? 'battery-half' : 'battery-dead';
-    const batteryColor = batteryHealthValue >= 90 ? '#34d399' : batteryHealthValue >= 80 ? '#facc15' : '#f87171';
-
-    return (
-      <View style={styles.itemContainer} accessible accessibilityLabel={`${item.name}, ${item.price}, ${item.warranty}`}>
-        {isLoadingImages[item.id] && (
-          <ActivityIndicator size="small" color="#564dcc" style={styles.imageLoader} />
-        )}
-        <Image
-          source={{ uri: 'https://placeimg.com/108/104/tech' }}
-          style={[styles.itemImage, isLoadingImages[item.id] && { opacity: 0.5 }]}
-          defaultSource={require('../../assets/images/icon.png')}
-          onLoadStart={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: true }))}
-          onLoadEnd={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: false }))}
-          onError={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: false }))}
-        />
-        <View style={styles.itemTextContainer}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemDescription}>{item.description}</Text>
-          <View style={styles.batteryContainer}>
-            <Ionicons
-              name={batteryIcon}
-              size={18}
-              color={batteryColor}
-              style={styles.batteryIcon}
-            />
-            <Text style={styles.batteryText}>Battery Health: {item.batteryHealth || 'N/A'}</Text>
-          </View>
-          <View style={styles.itemFooter}>
-            <Text style={styles.itemPrice}>{item.price}</Text>
-            <View style={[
-              styles.warrantyBadge,
-              { backgroundColor: item.warranty === 'IN WARRANTY' ? '#1a3c34' : '#4b1c1c' }
-            ]}>
-              <Text style={[
-                styles.warrantyText,
-                { color: item.warranty === 'IN WARRANTY' ? '#34d399' : '#f87171' }
-              ]}>
-                {item.warranty}
+  return (
+    <View
+      style={styles.itemContainer}
+      accessible
+      accessibilityLabel={`${item.name || 'Unknown item'}, ${item.price || 'N/A'}, ${warranty}`}
+    >
+      {isLoadingImages[item.id] && (
+        <ActivityIndicator size="small" color="#564DCC" style={styles.imageLoader} />
+      )}
+      <Image
+        source={{ uri: item.image || 'https://placeimg.com/108/104/tech' }}
+        style={[styles.image, isLoadingImages[item.id] && { opacity: 0.5 }]}
+        defaultSource={require('../../assets/images/icon.png')}
+        onLoadStart={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: true }))}
+        onLoad={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: false }))}
+        onError={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: false }))}
+      />
+      <View style={styles.itemTextContainer}>
+        <Text style={styles.itemName}>{item.name || 'Unknown'}</Text>
+        <Text style={styles.itemDescription} numberOfLines={2}>{item.description || 'No description'}</Text>
+        {serviceConfig.fields.map((field, index) => (
+          field.type === 'battery' || field.type === 'tyre' ? (
+            <View key={index} style={styles.batteryContainer}>
+              <Ionicons
+                name={
+                  field.type === 'battery'
+                    ? parseInt(item[field.key]) >= 90
+                      ? 'battery-full'
+                      : parseInt(item[field.key]) >= 80
+                      ? 'battery-half'
+                      : 'battery-dead'
+                    : 'car'
+                }
+                size={18}
+                color={
+                  parseInt(item[field.key]) >= 80
+                    ? '#34D399'
+                    : parseInt(item[field.key]) >= 50
+                    ? '#FACC15'
+                    : '#F87171'
+                }
+                style={styles.batteryIcon}
+              />
+              <Text style={styles.batteryText}>
+                {field.label}: {item[field.key] || 'N/A'}{field.unit || ''}
               </Text>
             </View>
+          ) : (
+            <View key={index} style={styles.fieldContainer}>
+              {field.icon && <Ionicons name={field.icon} size={18} color="#333333" style={styles.fieldIcon} />}
+              <Text style={styles.fieldText}>{field.label}: {item[field.key] || 'N/A'}</Text>
+            </View>
+          )
+        ))}
+        <View style={styles.itemFooter}>
+          <Text style={styles.itemPrice}>{item.price || 'N/A'}</Text>
+          <View
+            style={[
+              styles.warrantyBadge,
+              {
+                backgroundColor:
+                  warranty === 'Warranty' ? '#E6F4EA' : warranty === 'Unknown' ? '#E0E0E0' : '#FEE2E2',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.warrantyText,
+                {
+                  color:
+                    warranty === 'Warranty' ? '#16A34A' : warranty === 'Unknown' ? '#666666' : '#DC2626',
+                },
+              ]}
+            >
+              {warranty}
+            </Text>
           </View>
         </View>
       </View>
-    );
-  }, [isLoadingImages]);
-
-  const renderEmptyComponent = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>
-        {searchQuery ? 'No items match your search.' : 'No items in inventory.'}
-      </Text>
     </View>
   );
+});
+
+// Reusable Empty List Component (from Purchase.js)
+const EmptyList = ({ searchQuery, error }) => (
+  <View style={styles.emptyContainer}>
+    <Text style={styles.emptyText}>
+      {searchQuery ? 'No items match your search.' : error || 'No items in inventory.'}
+    </Text>
+  </View>
+);
+
+// Reusable Footer Loader Component (from Purchase.js)
+const FooterLoader = ({ isLoading }) => (
+  isLoading && (
+    <View style={styles.footerLoader}>
+      <ActivityIndicator size="large" color="#564DCC" />
+    </View>
+  )
+);
+
+// InventoryScreen Component
+const InventoryScreen = () => {
+  const nav = useNavigation();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [serviceName, setServiceName] = useState('');
+  const [isServiceNameLoading, setIsServiceNameLoading] = useState(true);
+  const [errorServiceName, setErrorServiceName] = useState(null);
+  const [isLoadingImages, setIsLoadingImages] = useState({});
+
+  // Fetch ServiceName from SecureStore
+  useEffect(() => {
+    const fetchServiceName = async () => {
+      setIsServiceNameLoading(true);
+      try {
+        const storedServiceName = await SecureStore.getItemAsync('serviceName');
+        setServiceName(storedServiceName || 'Mobile');
+      } catch (error) {
+        console.error('Failed to fetch ServiceName:', error);
+        setErrorServiceName('Failed to retrieve inventory type.');
+        setServiceName('Mobile');
+      } finally {
+        setIsServiceNameLoading(false);
+      }
+    };
+    fetchServiceName();
+  }, []);
+
+  // Get service config or fallback to Mobile
+  const serviceConfig = servicesConfig[serviceName] || servicesConfig.Mobile;
+
+  // Use the service's fetch hook
+  const { items, isLoading, isInitialLoading, error, loadMore, refresh } = serviceConfig.hook();
+
+  // Filter data based on search query
+  const filteredData = useMemo(
+    () =>
+      Array.isArray(items)
+        ? items.filter((item) => item.name && item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        : [],
+    [items, searchQuery]
+  );
+
+  // Handle navigation to AddEntry
+  const handleAdd = useCallback(() => {
+    router.push('/AddEntry');
+  }, [router]);
+
+  if (isServiceNameLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#564DCC" />
+          <Text style={styles.loadingText}>Loading inventory type...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ErrorBoundary>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity accessibilityLabel="Open menu" onPress={()=>{Nav.openDrawer()}} accessibilityRole="button">
-            <Ionicons name="menu" size={28} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity accessibilityLabel="Add new item" accessibilityRole="button">
-            <Ionicons name="add" size={28} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Title and Animation */}
-        <View style={styles.titleContainer}>
-          <View style={styles.titleTextContainer}>
-            <Text style={styles.titleText}>Inventory</Text>
-            <Text style={styles.subtitleText}>Here is the list of items in inventory</Text>
-          </View>
-          <View style={styles.animationContainer}>
-            {/*
-              Note: Ensure '../../assets/lottie/reales2.json' exists in your project.
-              If not, replace with a valid Lottie file or remove the LottieView.
-            */}
-            <LottieView
-              source={require('../../assets/lottie/inventory.json')}
-              autoPlay
-              loop
-              speed={0.7}
-              style={styles.lottieAnimation}
-              onError={() => console.warn('Lottie animation failed to load')}
-              fallback={() => (
-                <View style={styles.lottieFallback}>
-                  <Text style={styles.lottieFallbackText}>Animation unavailable</Text>
-                </View>
-              )}
-            />
-          </View>
-        </View>
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#564dcc" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search inventory..."
-            placeholderTextColor="#888"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            accessibilityLabel="Search inventory items"
-            returnKeyType="search"
+      <Header onMenuPress={() => nav.openDrawer()} onAddPress={handleAdd} />
+      <TitleSection title={serviceConfig.title} subtitle={serviceConfig.subtitle} />
+      <CustomSearchInput
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder={`Search ${serviceConfig.title.toLowerCase()}...`}
+        accessibilityLabel={`Search ${serviceName.toLowerCase()} items`}
+      />
+      <FlatList
+        data={filteredData}
+        renderItem={({ item }) => (
+          <InventoryItem
+            item={item}
+            serviceConfig={serviceConfig}
+            isLoadingImages={isLoadingImages}
+            setIsLoadingImages={setIsLoadingImages}
           />
-        </View>
-
-        {/* List of Inventory Items */}
-        <FlatList
-          data={filteredData}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id || `fallback-${Math.random()}`} // Fallback for missing id
-          style={styles.list}
-          showsVerticalScrollIndicator={false}
-          initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={21}
-          ListEmptyComponent={renderEmptyComponent}
-        />
-      </ErrorBoundary>
+        )}
+        keyExtractor={(item) => item.id}
+        style={styles.list}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={21}
+        ListEmptyComponent={() => <EmptyList searchQuery={searchQuery} error={error || errorServiceName} />}
+        ListFooterComponent={() => <FooterLoader isLoading={isLoading} />}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        refreshing={isInitialLoading}
+        onRefresh={refresh}
+      />
     </SafeAreaView>
   );
 };
 
-export default Inventory;
+export default InventoryScreen;
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#FFFFFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  loadingText: {
+    color: '#333333',
+    fontSize: 16,
+    marginTop: 10,
   },
   header: {
     flexDirection: 'row',
@@ -189,6 +343,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   titleContainer: {
     flexDirection: 'row',
@@ -201,45 +358,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#564dcc',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#564DCC',
   },
   subtitleText: {
     fontSize: 14,
-    color: '#fff',
+    color: '#666666',
     marginTop: 6,
   },
   animationContainer: {
-    width: 100,
-    height: 100,
+    width: 80,
+    height: 80,
   },
   lottieAnimation: {
-    width: '120%',
-    height: '120%',
-  },
-  lottieFallback: {
     width: '100%',
     height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-  },
-  lottieFallbackText: {
-    color: '#aaa',
-    fontSize: 12,
+    transform: [{ scale: 1.1 }],
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 20,
     marginVertical: 15,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: '#3a3a3a',
+    borderColor: '#E0E0E0',
   },
   searchIcon: {
     marginRight: 8,
@@ -249,28 +395,31 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingVertical: 12,
     fontSize: 16,
-    color: '#fff',
+    color: '#333333',
   },
   list: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   itemContainer: {
     flexDirection: 'row',
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
     padding: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  itemImage: {
+  image: {
     width: 80,
     height: 80,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: '#333',
+    backgroundColor: '#EEEEEE',
   },
   imageLoader: {
     position: 'absolute',
@@ -284,30 +433,43 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 6,
+    fontWeight: '600',
+    color: '#333333',
   },
   itemDescription: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: 13,
+    color: '#666666',
     marginBottom: 6,
   },
   batteryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-    // backgroundColor: '#3a3a3a',
-    padding: 6,
+    padding: 4,
+    borderRadius: 6,
+  },
+  fieldContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    padding: 4,
     borderRadius: 6,
   },
   batteryIcon: {
     marginRight: 6,
   },
+  fieldIcon: {
+    marginRight: 6,
+  },
   batteryText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#333333',
+  },
+  fieldText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#333333',
   },
   itemFooter: {
     flexDirection: 'row',
@@ -316,8 +478,8 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '600',
+    color: '#333333',
   },
   warrantyBadge: {
     borderRadius: 12,
@@ -336,17 +498,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#aaa',
+    color: '#666666',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  footerLoader: {
+    paddingVertical: 20,
     alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    color: '#f87171',
-    textAlign: 'center',
   },
 });

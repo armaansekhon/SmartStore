@@ -1,9 +1,11 @@
-import React, { useState, Component } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
+import * as SecureStore from 'expo-secure-store';
 import PurchaseForm from '../../components/ui/PurchaseForm';
 import SaleForm from '../../components/ui/SaleForm';
+import PurVehicleForm from '../../components/ui/PurVehicleForm';
+import SaleVehicleForm from '../../components/ui/SaleVehicleForm';
 import { Alert } from 'react-native';
 import { useNavigation } from 'expo-router';
 
@@ -36,8 +38,23 @@ class ErrorBoundary extends Component {
 }
 
 const AddEntry = () => {
-  const Nav =useNavigation()
+  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('purchase');
+  const [serviceName, setServiceName] = useState(null);
+
+  useEffect(() => {
+    const fetchServiceName = async () => {
+      try {
+        const storedServiceName = await SecureStore.getItemAsync('serviceName');
+        console.log(storedServiceName,"service is hereeeeeeee")
+        setServiceName(storedServiceName);
+      } catch (err) {
+        console.error('Failed to fetch serviceName from SecureStore:', err.message);
+        Alert.alert('Error', 'Unable to load service configuration.');
+      }
+    };
+    fetchServiceName();
+  }, []);
 
   const handleSave = () => {
     Alert.alert('Success', 'Form data saved (check console for details).');
@@ -47,21 +64,61 @@ const AddEntry = () => {
     Alert.alert('Cancelled', 'Form has been reset.');
   };
 
+  const renderForm = () => {
+    if (!serviceName) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading service configuration...</Text>
+        </View>
+      );
+    }
+
+    const isVehicle = serviceName === 'Vehicle';
+    const isMobileOrLaptop = serviceName === 'Mobile/Laptop' || serviceName === 'Laptop';
+
+    if (activeTab === 'purchase') {
+      return isVehicle ? (
+        <PurVehicleForm onSave={handleSave} onCancel={handleCancel} />
+      ) : isMobileOrLaptop ? (
+        <PurchaseForm onSave={handleSave} onCancel={handleCancel} />
+      ) : (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Unsupported service: {serviceName}</Text>
+        </View>
+      );
+    } else {
+      return isVehicle ? (
+        <SaleVehicleForm onSave={handleSave} onCancel={handleCancel} />
+      ) : isMobileOrLaptop ? (
+        <SaleForm onSave={handleSave} onCancel={handleCancel} />
+      ) : (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Unsupported service: {serviceName}</Text>
+        </View>
+      );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ErrorBoundary>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity accessibilityLabel="Open menu" accessibilityRole="button">
-            <Ionicons name="menu"  size={28} color="#fff"  
-            onPress={()=>{Nav.openDrawer()}}
-            
+            <Ionicons
+              name="menu"
+              size={28}
+              color="#000"
+              onPress={() => navigation.openDrawer()}
             />
           </TouchableOpacity>
           <TouchableOpacity accessibilityLabel="Back" accessibilityRole="button">
-            <Ionicons name="arrow-back" size={28} 
-              onPress={()=>{Nav.goBack()}}
-            color="#fff" />
+            <Ionicons
+              name="arrow-back"
+              size={28}
+              color="#000"
+              onPress={() => navigation.goBack()}
+            />
           </TouchableOpacity>
         </View>
 
@@ -92,11 +149,7 @@ const AddEntry = () => {
         </View>
 
         {/* Form */}
-        {activeTab === 'purchase' ? (
-          <PurchaseForm onSave={handleSave} onCancel={handleCancel} />
-        ) : (
-          <SaleForm onSave={handleSave} onCancel={handleCancel} />
-        )}
+        {renderForm()}
       </ErrorBoundary>
     </SafeAreaView>
   );
@@ -106,9 +159,9 @@ export default AddEntry;
 
 const styles = StyleSheet.create({
   safeArea: {
-    paddingTop:38,
+    paddingTop: 38,
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -128,15 +181,18 @@ const styles = StyleSheet.create({
   },
   subtitleText: {
     fontSize: 14,
-    color: '#fff',
+    color: '#000',
     marginTop: 6,
   },
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginVertical: 10,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#fafafa',
     borderRadius: 8,
+    borderWidth:1,
+    borderColor:"#aaa",
+
     overflow: 'hidden',
   },
   tab: {
@@ -149,7 +205,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 16,
-    color: '#aaa',
+    color: '#000',
     fontWeight: '600',
   },
   activeTabText: {
@@ -174,8 +230,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#000',
   },
 });

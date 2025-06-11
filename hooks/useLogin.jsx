@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'https://fanfliks.onrender.com/api';
+const BASE_URL = 'https://trackinventory-xdex.onrender.com/api';
 
 // Utility to decode JWT payload (base64 decode)
 const decodeJwtPayload = (token) => {
@@ -41,11 +41,11 @@ const useLogin = () => {
           source: '2', // Explicitly set source to "2"
         };
 
-        console.log('Sending Login Request:', {
-          url: `${BASE_URL}/User/login`, // Lowercase 'login'
-          payload,
-          attempt,
-        });
+        // console.log('Sending Login Request:', {
+        //   url: `${BASE_URL}/User/login`,
+        //   payload,
+        //   attempt,
+        // });
 
         response = await fetch(`${BASE_URL}/User/login`, {
           method: 'POST',
@@ -56,15 +56,15 @@ const useLogin = () => {
         });
 
         // Log response status and headers
-        console.log('Response Status:', response.status, 'Headers:', {
-          contentType: response.headers.get('content-type'),
-          contentLength: response.headers.get('content-length'),
-        });
+        // console.log('Response Status:', response.status, 'Headers:', {
+        //   contentType: response.headers.get('content-type'),
+        //   contentLength: response.headers.get('content-length'),
+        // });
 
         // Read response text
         try {
           responseText = await response.text();
-          console.log('Raw Response Text:', responseText || 'Empty');
+          // console.log('Raw Response Text:', responseText || 'Empty');
         } catch (textErr) {
           console.warn('Failed to read response text:', textErr.message);
           throw new Error('Unable to read response');
@@ -74,7 +74,7 @@ const useLogin = () => {
         if (responseText) {
           try {
             responseData = JSON.parse(responseText);
-            console.log('Parsed Response Data:', responseData);
+            // console.log('Parsed Response Data:', responseData);
           } catch (jsonErr) {
             console.warn('Failed to parse JSON:', jsonErr.message, 'Response Text:', responseText);
             throw new Error(`Invalid JSON response: ${jsonErr.message}`);
@@ -94,12 +94,13 @@ const useLogin = () => {
         }
 
         // Validate required fields (soft validation)
-        const { accessToken, userToken, userId } = responseData;
-        if (!accessToken || !userToken || !userId) {
+        const { accessToken, userToken, userId, serviceName } = responseData;
+        if (!accessToken || !userToken || !userId || !serviceName) {
           console.warn('Missing required fields in response:', {
             hasAccessToken: !!accessToken,
             hasUserToken: !!userToken,
             hasUserId: !!userId,
+            hasServiceName: !!serviceName,
           });
         }
 
@@ -119,6 +120,7 @@ const useLogin = () => {
         if (accessToken) storePromises.push(SecureStore.setItemAsync('accessToken', accessToken));
         if (userToken) storePromises.push(SecureStore.setItemAsync('userToken', userToken));
         if (userId) storePromises.push(SecureStore.setItemAsync('userId', userId));
+        if (serviceName) storePromises.push(SecureStore.setItemAsync('serviceName', serviceName));
         storePromises.push(SecureStore.setItemAsync('firstLogin', firstLogin));
 
         await Promise.all(storePromises);
@@ -127,6 +129,7 @@ const useLogin = () => {
           accessToken: accessToken ? accessToken.slice(0, 10) + '...' : 'Missing',
           userToken: userToken ? userToken.slice(0, 10) + '...' : 'Missing',
           userId: userId || 'Missing',
+          serviceName: serviceName || 'Missing',
           firstLogin,
         });
 

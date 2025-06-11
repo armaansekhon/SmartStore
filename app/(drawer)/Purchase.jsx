@@ -1,253 +1,96 @@
-import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, Image, FlatList, TextInput, TouchableOpacity, ActivityIndicator, Modal, ScrollView } from 'react-native';
+
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { StyleSheet, Text, View, Image, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
 import { useNavigation, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import useFetchPurchases from '../../hooks/useFetchPurchases';
+import useFetchVehiclePurchases from '../../hooks/useFetchVehiclePurchases';
 
-const Purchase = () => {
-  const Nav = useNavigation();
-  const Router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDays, setSelectedDays] = useState(null);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const { purchases, isLoading, isInitialLoading, error, loadMore, refresh } = useFetchPurchases(selectedDays);
-  const [isLoadingImages, setIsLoadingImages] = useState({});
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+// Service Configuration for Dynamic Services
+const servicesConfig = {
+  Mobile: {
+    hook: useFetchPurchases,
+    title: 'Purchase',
+    subtitle: 'Here is the list of items purchased',
+    fields: [
+      { key: 'batteryHealth', label: 'Battery Health', type: 'battery', unit: '%' },
+    ],
+    statusKey: 'productStatus',
+  },
+  Vehicle: {
+    hook: useFetchVehiclePurchases,
+    title: 'Vehicle Purchases',
+    subtitle: 'Here is the list of vehicles purchased',
+    fields: [
+      { key: 'model', label: 'Model', type: 'text', icon: 'car' },
+      // { key: 'tyrePercentage', label: 'Tyre Percentage', type: 'text', unit: '%' },
+      // { key: 'noOfKeys', label: 'Number of Keys', type: 'text', icon: 'key' }, // Added noOfKeys
+    ],
+    statusKey: 'vehicleStatus',
+  },
+};
 
-  const dropdownOptions = [
-    { label: 'All', value: null },
-    { label: 'This Week', value: 7 },
-    { label: 'This Month', value: 30 },
-  ];
+// Utility function for warranty status
+const statusToWarranty = (item, statusKey) => {
+  const statusValue = parseInt(item[statusKey]);
+  switch (statusValue) {
+    case 0: return 'Warranty';
+    case 1: return 'Out of Warranty';
+    case 2: return 'Damaged';
+    case 3: return 'Lost';
+    case 4: return 'Stolen';
+    default: return 'Unknown';
+  }
+};
 
-  const statusToWarranty = (productStatus) => {
-    switch (parseInt(productStatus)) {
-      case 0: return 'Warranty';
-      case 1: return 'Out of Warranty';
-      case 2: return 'Damaged';
-      case 3: return 'Lost';
-      case 4: return 'Stolen';
-      default: return 'Unknown';
-    }
-  };
+// Reusable Search Input Component
+const CustomSearchInput = ({ value, onChangeText, placeholder, accessibilityLabel }) => (
+  <View style={styles.searchContainer}>
+    <Ionicons name="search" size={20} color="#564dcc" style={styles.searchIcon} />
+    <TextInput
+      style={styles.searchInput}
+      placeholder={placeholder}
+      placeholderTextColor="#888"
+      value={value}
+      onChangeText={onChangeText}
+      accessibilityLabel={accessibilityLabel}
+      returnKeyType="search"
+    />
+  </View>
+);
 
-  const filteredData = Array.isArray(purchases)
-    ? purchases.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : [];
+// Reusable Dropdown Component
+const CustomDropdown = ({ value, options, onSelect, placeholder }) => {
+  const [visible, setVisible] = useState(false);
 
-  const renderItem = useCallback(({ item }) => {
-    const batteryHealthValue = parseInt(item.batteryHealth) || 0;
-    const warranty = statusToWarranty(item.productStatus) || 'Unknown';
-
-    return (
+  return (
+    <View>
       <TouchableOpacity
-        style={styles.itemContainer}
-        onPress={() => {
-          setSelectedProduct(item);
-          setModalVisible(true);
-        }}
-        accessible
-        accessibilityLabel={`${item.name}, ₹${item.price}, ${warranty}`}
+        style={styles.dropdownButton}
+        onPress={() => setVisible(true)}
+        accessibilityLabel="Select purchase time range"
         accessibilityRole="button"
       >
-        {isLoadingImages[item.id] && (
-          <ActivityIndicator size="small" color="#564dcc" style={styles.imageLoader} />
-        )}
-        <Image
-          source={{ uri: item.image || 'https://placeimg.com/108/104/tech' }}
-          style={[styles.itemImage, isLoadingImages[item.id] && { opacity: 0.5 }]}
-          defaultSource={require('../../assets/images/icon.png')}
-          onLoadStart={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: true }))}
-          onLoadEnd={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: false }))}
-          onError={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: false }))}
-        />
-        <View style={styles.itemTextContainer}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
-          <View style={styles.batteryContainer}>
-            <Ionicons
-              name={batteryHealthValue >= 90 ? 'battery-full' : batteryHealthValue >= 80 ? 'battery-half' : 'battery-dead'}
-              size={18}
-              color={batteryHealthValue >= 90 ? '#34d399' : batteryHealthValue >= 80 ? '#facc15' : '#f87171'}
-              style={styles.batteryIcon}
-            />
-            <Text style={styles.batteryText}>Battery Health: {item.batteryHealth}%</Text>
-          </View>
-          <View style={styles.itemFooter}>
-            <Text style={styles.itemPrice}>₹{item.price}</Text>
-            <View style={[
-              styles.warrantyBadge,
-              {
-                backgroundColor:
-                  warranty === 'Warranty' ? '#1a3c34' :
-                  warranty === 'Unknown' ? '#3a3a3a' : '#4b1c1c'
-              }
-            ]}>
-              <Text style={[
-                styles.warrantyText,
-                {
-                  color:
-                    warranty === 'Warranty' ? '#34d399' :
-                    warranty === 'Unknown' ? '#aaa' : '#f87171'
-                }
-              ]}>
-                {warranty}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={styles.editIcon}
-          onPress={() => Router.push({ pathname: '/UpdateEntry', params: { id: item.id } })}
-          accessibilityLabel={`Edit ${item.name}`}
-          accessibilityRole="button"
-        >
-          <Ionicons name="pencil" size={20} color="#564dcc" />
-        </TouchableOpacity>
+        <Text style={styles.dropdownButtonText}>
+          {options.find(opt => opt.value === value)?.label || placeholder}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color="#564dcc" />
       </TouchableOpacity>
-    );
-  }, [isLoadingImages]);
-
-  const renderEmptyComponent = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>
-        {searchQuery ? 'No items match your search.' : error || 'No purchased items available.'}
-      </Text>
-    </View>
-  );
-
-  const renderFooter = () => (
-    isLoading && (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="large" color="#564dcc" />
-      </View>
-    )
-  );
-
-  const renderModal = () => {
-    if (!selectedProduct) return null;
-
-    const warranty = statusToWarranty(selectedProduct.productStatus) || 'Unknown';
-    const images = selectedProduct.images || [];
-
-    return (
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <ScrollView>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
-                <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
-                  accessibilityLabel="Close product details"
-                  accessibilityRole="button"
-                >
-                  <Ionicons name="close" size={24} color="#fff" />
-                </TouchableOpacity>
-              </View>
-
-              {images.length > 0 && (
-                <FlatList
-                  horizontal
-                  data={images}
-                  renderItem={({ item }) => (
-                    <Image
-                      source={{ uri: item.uri || 'https://placeimg.com/300/200/tech' }}
-                      style={styles.modalImage}
-                      onError={() => console.warn(`Failed to load image: ${item.uri}`)}
-                    />
-                  )}
-                  keyExtractor={(item, index) => `${index}`}
-                  style={styles.imageCarousel}
-                  showsHorizontalScrollIndicator={false}
-                />
-              )}
-
-              <View style={styles.modalContent}>
-                <Text style={styles.modalLabel}>Description</Text>
-                <Text style={styles.modalText}>{selectedProduct.description || 'No description available'}</Text>
-
-                <Text style={styles.modalLabel}>Price</Text>
-                <Text style={styles.modalText}>₹{selectedProduct.price}</Text>
-
-                <Text style={styles.modalLabel}>Battery Health</Text>
-                <View style={styles.batteryContainer}>
-                  <Ionicons
-                    name={parseInt(selectedProduct.batteryHealth) >= 90 ? 'battery-full' : parseInt(selectedProduct.batteryHealth) >= 80 ? 'battery-half' : 'battery-dead'}
-                    size={18}
-                    color={parseInt(selectedProduct.batteryHealth) >= 90 ? '#34d399' : parseInt(selectedProduct.batteryHealth) >= 80 ? '#facc15' : '#f87171'}
-                    style={styles.batteryIcon}
-                  />
-                  <Text style={styles.modalText}>{selectedProduct.batteryHealth}%</Text>
-                </View>
-
-                <Text style={styles.modalLabel}>Product Status</Text>
-                <Text style={[styles.modalText, { color: warranty === 'Warranty' ? '#34d399' : warranty === 'Unknown' ? '#aaa' : '#f87171' }]}>
-                  {warranty}
-                </Text>
-
-                {selectedProduct.serialNumber && (
-                  <>
-                    <Text style={styles.modalLabel}>Serial Number</Text>
-                    <Text style={styles.modalText}>{selectedProduct.serialNumber}</Text>
-                  </>
-                )}
-
-                {(selectedProduct.imeiNumber1 || selectedProduct.imeiNumber2) && (
-                  <>
-                    <Text style={styles.modalLabel}>IMEI Number(s)</Text>
-                    {selectedProduct.imeiNumber1 && <Text style={styles.modalText}>IMEI 1: {selectedProduct.imeiNumber1}</Text>}
-                    {selectedProduct.imeiNumber2 && <Text style={styles.modalText}>IMEI 2: {selectedProduct.imeiNumber2}</Text>}
-                  </>
-                )}
-
-                <Text style={styles.modalLabel}>Seller Details</Text>
-                <Text style={styles.modalText}>Name: {selectedProduct.customerName || 'N/A'}</Text>
-                <Text style={styles.modalText}>Phone: {selectedProduct.phone || 'N/A'}</Text>
-                <Text style={styles.modalText}>Village: {selectedProduct.address || 'N/A'}</Text>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-
-  const renderDropdownModal = () => (
-    <Modal
-      visible={dropdownVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setDropdownVisible(false)}
-    >
-      <TouchableOpacity
-        style={styles.dropdownOverlay}
-        activeOpacity={1}
-        onPress={() => setDropdownVisible(false)}
-      >
+      {visible && (
         <View style={styles.dropdownModal}>
-          {dropdownOptions.map((option) => (
+          {options.map((option) => (
             <TouchableOpacity
               key={option.value === null ? 'null' : option.value}
               style={[
                 styles.dropdownOption,
-                selectedDays === option.value && styles.dropdownOptionSelected,
+                value === option.value && styles.dropdownOptionSelected,
               ]}
               onPress={() => {
-                console.log('Selected option:', option.value);
-                setSelectedDays(option.value);
-                setDropdownVisible(false);
-                refresh();
+                onSelect(option.value);
+                setVisible(false);
               }}
               accessibilityLabel={`Filter by ${option.label}`}
               accessibilityRole="button"
@@ -256,25 +99,212 @@ const Purchase = () => {
             </TouchableOpacity>
           ))}
         </View>
-      </TouchableOpacity>
-    </Modal>
+      )}
+    </View>
   );
+};
+  
+
+// Reusable Purchase Item Component
+const PurchaseItem = React.memo(({ item, serviceConfig, onEdit, isLoadingImages, setIsLoadingImages }) => {
+const warranty = statusToWarranty(item, serviceConfig.statusKey);
+  // Use mediaThumb_100 for vehicles, image for others, or fallback
+  const imageSource = serviceConfig.title === 'Vehicle Purchases'
+    ? item.mediaThumb_100
+    : item.image || 'https://placeimg.com/108/104/any';
+
+  return (
+  
+    <View
+    
+      style={styles.itemContainer}
+      accessible
+      accessibilityLabel={`${item.name || 'Unknown item'}, ₹${item.price || 'N/A'}, ${warranty}`}
+      accessibilityRole="none"
+    >
+      {isLoadingImages[item.id] && (
+        <ActivityIndicator size="small" color="#564dcc" style={styles.imageLoader} />
+      )}
+      {console.log(item.price)}
+      <Image
+        source={{ uri: imageSource }}
+        style={[styles.image, isLoadingImages[item.id] && { opacity: 0.5 }]}
+        defaultSource={require('../../assets/images/icon.png')}
+        onLoadStart={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: true }))}
+        onLoad={() => setIsLoadingImages(prev => ({ ...prev, [item.id]: false }))}
+        onError={() => {
+          console.warn(`Failed to load image for item ${item.id}: ${imageSource}`);
+          setIsLoadingImages(prev => ({ ...prev, [item.id]: false }));
+        }}
+      />
+      <View style={styles.itemTextContainer}>
+        <Text style={styles.itemName}>{item.name || 'Unknown'}</Text>
+        <Text style={styles.itemDescription} numberOfLines={2}>{item.description || 'No description'}</Text>
+        {serviceConfig.fields.map((field, index) => (
+          field.type === 'battery' ? (
+            <View key={index} style={styles.batteryContainer}>
+              <Ionicons
+                name={parseInt(item[field.key]) >= 90 ? 'battery-full' : parseInt(item[field.key]) >= 80 ? 'battery-half' : 'battery-dead'}
+                size={18}
+                color={parseInt(item[field.key]) >= 90 ? '#34d399' : parseInt(item[field.key]) >= 80 ? '#facc15' : '#f87171'}
+                style={styles.batteryIcon}
+              />
+              <Text style={styles.batteryText}>{field.label}: {item[field.key] || 'N/A'}{field.unit || ''}</Text>
+            </View>
+          ) : (
+            <View key={index} style={styles.fieldContainer}>
+              {field.icon && <Ionicons name={field.icon} size={18} color="#333" style={styles.fieldIcon} />}
+              <Text style={styles.fieldText}>{field.label}: {item[field.key] || 'N/A'}</Text>
+            </View>
+          )
+        ))}
+        <View style={styles.itemFooter}>
+          <Text style={styles.itemPrice}>₹{item.price || 'N/A'}</Text>
+          <View style={[
+            styles.warrantyBadge,
+            {
+              backgroundColor:
+                warranty === 'Warranty' ? '#e6f4ea' :
+                warranty === 'Unknown' ? '#e0e0e0' : '#fee2e2',
+            }
+          ]}>
+            <Text style={[
+              styles.warrantyText,
+              {
+                color:
+                  warranty === 'Warranty' ? '#16a34a' :
+                  warranty === 'Unknown' ? '#666' : '#dc2626',
+              }
+            ]}>
+              {warranty}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={styles.editIcon}
+        onPress={onEdit}
+        accessibilityLabel={`Edit ${item.name || 'Unknown item'}`}
+        accessibilityRole="button"
+      >
+        <Ionicons name="settings-outline" size={20} color="#564dcc" />
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+// Reusable Empty List Component
+const EmptyList = ({ searchQuery, error }) => (
+  <View style={styles.emptyContainer}>
+    <Text style={styles.emptyText}>
+      {searchQuery ? 'No items match your search.' : error || 'No purchased items available.'}
+    </Text>
+  </View>
+);
+
+// Reusable Footer Loader Component
+const FooterLoader = ({ isLoading }) => (
+  isLoading && (
+    <View style={styles.footerLoader}>
+      <ActivityIndicator size="large" color="#564dcc" />
+    </View>
+  )
+);
+
+// Purchase Component
+const Purchase = () => {
+  const nav = useNavigation();
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDays, setSelectedDays] = useState(null);
+  const [serviceName, setServiceName] = useState('');
+  const [isServiceNameLoading, setIsServiceNameLoading] = useState(true);
+  const [errorServiceName, setErrorServiceName] = useState(null);
+  const [isLoadingImages, setIsLoadingImages] = useState({});
+
+  const dropdownOptions = [
+    { label: 'All', value: null },
+    { label: 'This Week', value: 7 },
+    { label: 'This Month', value: 30 },
+  ];
+
+  // Fetch ServiceName from SecureStore
+  useEffect(() => {
+    const fetchServiceName = async () => {
+      setIsServiceNameLoading(true);
+      try {
+        const storedServiceName = await SecureStore.getItemAsync('serviceName');
+        if (storedServiceName) {
+          setServiceName(storedServiceName);
+        } else {
+          console.warn('ServiceName not found in SecureStore, defaulting to "Mobile".');
+          setServiceName('Mobile');
+        }
+      } catch (error) {
+        const errorMessage = 'Failed to retrieve ServiceName from SecureStore.';
+        console.error(errorMessage, error);
+        setErrorServiceName(errorMessage);
+        setServiceName('Mobile'); // Fallback
+      } finally {
+        setIsServiceNameLoading(false);
+      }
+    };
+
+    fetchServiceName();
+  }, []);
+
+  // Get service config or fallback to Mobile
+  const serviceConfig = servicesConfig[serviceName] || servicesConfig.Mobile;
+
+  // Use the service's fetch hook
+  const { purchases, isLoading, isInitialLoading, error, loadMore, refresh } = serviceConfig.hook(selectedDays);
+
+  const filteredData = useMemo(() => (
+    Array.isArray(purchases)
+      ? purchases.filter(item =>
+          item.name && item.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : []
+  ), [purchases, searchQuery]);
+
+  const handleEdit = useCallback((id) => {
+    router.push({ pathname: '/UpdateEntry', params: { id } });
+  }, [router]);
+
+  if (isServiceNameLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#666" />
+          <Text style={styles.loadingText}>Loading items...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity accessibilityLabel="Open menu" onPress={() => Nav.openDrawer()} accessibilityRole="button">
-          <Ionicons name="menu" size={28} color="#fff" />
+        <TouchableOpacity
+          onPress={() => nav.openDrawer()}
+          accessibilityLabel="Open menu"
+          accessibilityRole="button"
+        >
+          <Ionicons name="menu" size={28} color="#333" />
         </TouchableOpacity>
-        <TouchableOpacity accessibilityLabel="Add new item" accessibilityRole="button">
-          <Ionicons name="add" size={28} onPress={() => Router.push('/AddEntry')} color="#fff" />
+        <TouchableOpacity
+          onPress={() => router.push('/AddEntry')}
+          accessibilityLabel="Add new item"
+          accessibilityRole="button"
+        >
+          <Ionicons name="add" size={28} color="#333" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.titleContainer}>
         <View style={styles.titleTextContainer}>
-          <Text style={styles.titleText}>Purchase</Text>
-          <Text style={styles.subtitleText}>Here is the list of items purchased</Text>
+          <Text style={styles.titleText}>{serviceConfig.title}</Text>
+          <Text style={styles.subtitleText}>{serviceConfig.subtitle}</Text>
         </View>
         <View style={styles.animationContainer}>
           <LottieView
@@ -288,50 +318,47 @@ const Purchase = () => {
       </View>
 
       <View style={styles.inputRow}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#564dcc" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search purchases..."
-            placeholderTextColor="#888"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            accessibilityLabel="Search purchased items"
-            returnKeyType="search"
-          />
-        </View>
-        <TouchableOpacity
-          style={styles.dropdownButton}
-          onPress={() => setDropdownVisible(true)}
-          accessibilityLabel="Select purchase time range"
-          accessibilityRole="button"
-        >
-          <Text style={styles.dropdownButtonText}>
-            {dropdownOptions.find(opt => opt.value === selectedDays)?.label || 'All'}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#564dcc" />
-        </TouchableOpacity>
+        <CustomSearchInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={`Search ${serviceConfig.title.toLowerCase()}...`}
+          accessibilityLabel={`Search ${serviceName.toLowerCase()} items`}
+        />
+        <CustomDropdown
+          value={selectedDays}
+          options={dropdownOptions}
+          onSelect={(value) => {
+            setSelectedDays(value);
+            refresh();
+          }}
+          placeholder="All"
+        />
       </View>
 
       <FlatList
         data={filteredData}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <PurchaseItem
+            item={item}
+            serviceConfig={serviceConfig}
+            onEdit={() => handleEdit(item.id)}
+            isLoadingImages={isLoadingImages}
+            setIsLoadingImages={setIsLoadingImages}
+          />
+        )}
         keyExtractor={(item) => item.id}
         style={styles.list}
         showsVerticalScrollIndicator={false}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={21}
-        ListEmptyComponent={renderEmptyComponent}
-        ListFooterComponent={renderFooter}
+        ListEmptyComponent={() => <EmptyList searchQuery={searchQuery} error={error || errorServiceName} />}
+        ListFooterComponent={() => <FooterLoader isLoading={isLoading} />}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         refreshing={isInitialLoading}
         onRefresh={refresh}
       />
-
-      {renderModal()}
-      {renderDropdownModal()}
     </SafeAreaView>
   );
 };
@@ -341,7 +368,18 @@ export default Purchase;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    color: '#333',
+    fontSize: 16,
+    marginTop: 10,
   },
   header: {
     flexDirection: 'row',
@@ -349,6 +387,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
   titleContainer: {
     flexDirection: 'row',
@@ -361,23 +402,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleText: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#564dcc',
   },
   subtitleText: {
     fontSize: 14,
-    color: '#fff',
+    color: '#666',
     marginTop: 6,
   },
   animationContainer: {
-    width: 100,
-    height: 100,
+    width: 80,
+    height: 80,
   },
   lottieAnimation: {
     width: '100%',
     height: '100%',
-    transform: [{ scale: 1.2 }],
+    transform: [{ scale: 1.1 }],
   },
   inputRow: {
     flexDirection: 'row',
@@ -390,11 +431,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#fff',
     borderRadius: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: '#3a3a3a',
+    borderColor: '#ddd',
     marginRight: 10,
   },
   searchIcon: {
@@ -405,36 +446,36 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingVertical: 12,
     fontSize: 16,
-    color: '#fff',
+    color: '#333',
   },
   dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#564dcc',
+    borderColor: '#ddd',
     paddingVertical: 10,
     paddingHorizontal: 12,
     width: 160,
     justifyContent: 'space-between',
   },
   dropdownButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#333',
+    fontSize: 14,
     fontWeight: '500',
   },
-  dropdownOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   dropdownModal: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff',
     borderRadius: 8,
     width: 160,
     paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1000,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -442,35 +483,38 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   dropdownOption: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
   },
   dropdownOptionSelected: {
-    backgroundColor: '#564dcc',
+    backgroundColor: '#e0e0ff',
   },
   dropdownOptionText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#333',
+    fontSize: 14,
     fontWeight: '500',
   },
   list: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   itemContainer: {
     flexDirection: 'row',
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
     padding: 12,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
     elevation: 2,
-    position: 'relative', // For absolute positioning of edit icon
+    position: 'relative',
   },
-  itemImage: {
-    width: 80,
-    height: 80,
+  image: {
+    width: 100,
+    height: 100,
     borderRadius: 8,
+    resizeMode:"cover",
     marginRight: 12,
-    backgroundColor: '#333',
+    backgroundColor: '#eee',
   },
   imageLoader: {
     position: 'absolute',
@@ -484,28 +528,43 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '600',
+    color: '#333',
   },
   itemDescription: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: 13,
+    color: '#666',
     marginBottom: 6,
   },
   batteryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-    padding: 6,
+    padding: 4,
+    borderRadius: 6,
+  },
+  fieldContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    padding: 4,
     borderRadius: 6,
   },
   batteryIcon: {
     marginRight: 6,
   },
+  fieldIcon: {
+    marginRight: 6,
+  },
   batteryText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#333',
+  },
+  fieldText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#333',
   },
   itemFooter: {
     flexDirection: 'row',
@@ -514,8 +573,8 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: '600',
+    color: '#333',
   },
   warrantyBadge: {
     borderRadius: 12,
@@ -540,64 +599,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#aaa',
+    color: '#666',
   },
   footerLoader: {
     paddingVertical: 20,
     alignItems: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 16,
-    width: '90%',
-    maxHeight: '80%',
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  modalContent: {
-    marginBottom: 20,
-  },
-  modalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#564dcc',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  modalText: {
-    fontSize: 14,
-    color: '#fff',
-    marginBottom: 6,
-  },
-  modalImage: {
-    width: 300,
-    height: 200,
-    borderRadius: 8,
-    marginRight: 10,
-    backgroundColor: '#333',
-  },
-  imageCarousel: {
-    marginBottom: 20,
   },
 });

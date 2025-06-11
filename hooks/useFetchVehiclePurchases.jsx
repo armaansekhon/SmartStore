@@ -1,15 +1,15 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const useFetchPurchases = (days) => {
+const useFetchVehiclePurchases = (days) => {
   const [purchases, setPurchases] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [error, setError] = useState(null);
   const [skip, setSkip] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const take = 10; // Number of items per request
+  const take = 100; // Number of items per request, as per endpoint
 
   const fetchPurchases = useCallback(async (reset = false) => {
     if (isLoading || (!hasMore && !reset)) return;
@@ -28,42 +28,47 @@ const useFetchPurchases = (days) => {
       // Calculate skip for pagination
       const currentSkip = reset ? 0 : skip;
 
-      // Build request body
-      const requestBody = {
-        Type: '1',
-        Skip: currentSkip,
-        Take: take,
+      // Build query parameters
+      const params = {
+        skip: currentSkip,
+        take,
+        type: 1, // Vehicle purchases
       };
       if (days !== null) {
-        requestBody.Days = days;
+        params.days = days;
       }
 
       // API request
-      const response = await axios.post(
-        'https://trackinventory-xdex.onrender.com/api/Product/GetAllProducts',
-        requestBody,
+      const response = await axios.get(
+        'https://trackinventory-xdex.onrender.com/api/Vehicle/GetAllVehicles',
         {
+          params,
           headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
           },
         }
       );
 
-      // Extract products and ensure it's an array
-      const newData = Array.isArray(response.data?.products) ? response.data.products : [];
+      // Extract vehicles and ensure it's an array
+      const newData = Array.isArray(response.data?.vehicles) ? response.data.vehicles : [];
       const totalCount = response.data?.totalCount || 0;
 
       // Map data to include warranty field
       const mappedData = newData.map(item => ({
         ...item,
-        warranty: item.status === 1 ? 'IN WARRANTY' : 'OUT OF WARRANTY', // Adjust based on API logic
+        warranty: (() => {
+          switch (parseInt(item.vehicleStatus)) {
+            case 0: return 'Warranty';
+            case 1: return 'Out of Warranty';
+            case 2: return 'Damaged';
+            case 3: return 'Lost';
+            case 4: return 'Stolen';
+            default: return 'Unknown';
+          }
+        })(),
       }));
 
-      // console.log('API request body:', requestBody); // Debug log
-      // console.log('API response.data:', response.data); // Debug log
-      // console.log('Mapped data:', mappedData); // Debug log
-
+  
       // Update state
       setPurchases((prev) => (reset ? mappedData : [...prev, ...mappedData]));
       setSkip(currentSkip + take);
@@ -72,7 +77,7 @@ const useFetchPurchases = (days) => {
       const errorMessage =
         err.response?.data?.message ||
         err.message ||
-        'Failed to fetch purchases.';
+        'Failed to fetch vehicle purchases.';
       setError(errorMessage);
       setPurchases([]); // Reset purchases on error
     } finally {
@@ -102,4 +107,4 @@ const useFetchPurchases = (days) => {
   return { purchases, isLoading, isInitialLoading, error, loadMore, refresh };
 };
 
-export default useFetchPurchases;
+export default useFetchVehiclePurchases;

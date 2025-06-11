@@ -33,12 +33,13 @@ const useUploadPurchaseData = () => {
         CustomerName: sellerDetails.name || '',
         MobileNumber: sellerDetails.phone || '',
         Price: parseFloat(formData.price) || 0,
+        Storage: formData.storage || '', // Added Storage field
       };
 
-      console.log('Upload payload:', payload);
+      // console.log('Upload payload:', payload);
 
       const response = await axios.post(
-        'https://fanfliks.onrender.com/api/Product/UploadDetailsAndMedia',
+        'https://trackinventory-xdex.onrender.com/api/Product/UploadDetailsAndMedia',
         payload,
         {
           headers: {

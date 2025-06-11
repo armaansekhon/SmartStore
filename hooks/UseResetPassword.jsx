@@ -23,15 +23,15 @@ const useResetPassword = () => {
         Password: password,
       };
 
-      console.log('Sending Reset Password Request:', {
-        url: `${BASE_URL}/User/ResetPassword`,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        payload,
-      });
+      // console.log('Sending Reset Password Request:', {
+      //   url: `${BASE_URL}/User/ResetPassword`,
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     Authorization: `Bearer ${accessToken}`,
+      //   },
+      //   payload,
+      // });
 
       const response = await fetch(`${BASE_URL}/User/ResetPassword`, {
         method: 'POST',
@@ -45,13 +45,13 @@ const useResetPassword = () => {
       console.log('Response Status:', response.status);
 
       responseText = await response.text();
-      console.log('Raw Response Text:', responseText || 'Empty');
+      // console.log('Raw Response Text:', responseText || 'Empty');
 
       if (!response.ok) {
         throw new Error(responseText || `Failed to reset password (Status: ${response.status})`);
       }
 
-      console.log('Reset Password Request Successful');
+      // console.log('Reset Password Request Successful');
       setLoading(false);
       return true;
     } catch (err) {
